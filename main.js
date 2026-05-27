@@ -7,6 +7,7 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require("@iobroker/adapter-core");
+const { searchLogs } = require("./lib/log-search");
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -24,7 +25,7 @@ class Logsearch extends utils.Adapter {
         this.on("ready", this.onReady.bind(this));
         this.on("stateChange", this.onStateChange.bind(this));
         // this.on("objectChange", this.onObjectChange.bind(this));
-        // this.on("message", this.onMessage.bind(this));
+        this.on("message", this.onMessage.bind(this));
         this.on("unload", this.onUnload.bind(this));
     }
 
@@ -135,23 +136,37 @@ class Logsearch extends utils.Adapter {
         }
     }
 
-    // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-    // /**
-    //  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-    //  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-    //  * @param {ioBroker.Message} obj
-    //  */
-    // onMessage(obj) {
-    //     if (typeof obj === "object" && obj.message) {
-    //         if (obj.command === "send") {
-    //             // e.g. send email or pushover or whatever
-    //             this.log.info("send command");
+    /**
+     * Some message was sent to this instance over message box.
+     * @param {ioBroker.Message} obj
+     */
+    async onMessage(obj) {
+        if (!obj || obj.command !== "searchLogs") {
+            return;
+        }
 
-    //             // Send response in callback if required
-    //             if (obj.callback) this.sendTo(obj.from, obj.command, "Message received", obj.callback);
-    //         }
-    //     }
-    // }
+        const message = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
+        const options = {
+            logDirectory: typeof message.logDirectory === "string" ? message.logDirectory : "/opt/iobroker/log",
+            searchText: String(message.searchText ?? ""),
+            hours: Number(message.hours ?? 6),
+            level: typeof message.level === "string" ? message.level : "all",
+            maxRows: Number(message.maxRows ?? 500),
+            includeGzip: Boolean(message.includeGzip ?? true),
+        };
+
+        try {
+            const result = await searchLogs(options);
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, result, obj.callback);
+            }
+        } catch (error) {
+            this.log.error(`searchLogs failed: ${error.message}`);
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, { ok: false, error: error.message }, obj.callback);
+            }
+        }
+    }
 
 }
 
