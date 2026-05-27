@@ -85,8 +85,10 @@
         ]
     },
     "native": {
-        "option1": true,
-        "option2": "42"
+        "logDirectory": "/opt/iobroker/log",
+        "includeGzip": true,
+        "defaultHours": 6,
+        "defaultMaxRows": 500
     },
     "objects": [],
     "instanceObjects": []

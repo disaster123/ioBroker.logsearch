@@ -32,17 +32,16 @@ describe("module to test => function to test", () => {
 // ... more test suites => describe
 
 describe("onMessage searchLogs handler", () => {
-    it("should sanitize inputs, call utility and respond via callback", async () => {
-        const searchLogsStub = sinon.stub().resolves({
-            ok: true,
-            rows: [],
-            total: 0,
-            truncated: false,
-        });
-
+    function createTestAdapter(searchLogsStub) {
         class FakeAdapter {
             constructor(options) {
                 this.options = options;
+                this.config = {
+                    logDirectory: "/configured/log/dir",
+                    includeGzip: true,
+                    defaultHours: 6,
+                    defaultMaxRows: 500,
+                };
                 this.log = { error: sinon.stub() };
                 this.sendTo = sinon.stub();
             }
@@ -53,24 +52,66 @@ describe("onMessage searchLogs handler", () => {
             "@iobroker/adapter-core": { Adapter: FakeAdapter },
             "./lib/log-search": { searchLogs: searchLogsStub },
         });
-        const adapter = createAdapter();
+        return createAdapter();
+    }
+
+    it("should use config logDirectory/defaults and sanitize includeGzip string", async () => {
+        const searchLogsStub = sinon.stub().resolves({ ok: true, rows: [], total: 0, truncated: false });
+        const adapter = createTestAdapter(searchLogsStub);
 
         await adapter.onMessage({
             from: "system.adapter.admin.0",
             command: "searchLogs",
-            message: { hours: "12", maxRows: "50", includeGzip: 0, level: 5, searchText: 17 },
+            message: {
+                logDirectory: "/ignore/me",
+                includeGzip: "false",
+                level: 5,
+                searchText: 17,
+            },
             callback: { message: "cb" },
         });
 
         expect(searchLogsStub.calledOnce).to.equal(true);
         expect(searchLogsStub.firstCall.args[0]).to.deep.equal({
-            logDirectory: "/opt/iobroker/log",
+            logDirectory: "/configured/log/dir",
             searchText: "17",
-            hours: 12,
+            hours: 6,
             level: "all",
-            maxRows: 50,
+            maxRows: 500,
             includeGzip: false,
         });
         expect(adapter.sendTo.calledOnce).to.equal(true);
+    });
+
+    it("should not crash when callback is missing", async () => {
+        const searchLogsStub = sinon.stub().resolves({ ok: true, rows: [], total: 0, truncated: false });
+        const adapter = createTestAdapter(searchLogsStub);
+
+        await adapter.onMessage({
+            from: "system.adapter.admin.0",
+            command: "searchLogs",
+            message: { hours: "2", maxRows: "15" },
+        });
+
+        expect(searchLogsStub.calledOnce).to.equal(true);
+        expect(adapter.sendTo.called).to.equal(false);
+    });
+
+    it("should send structured error response when search throws", async () => {
+        const searchLogsStub = sinon.stub().rejects(new Error("boom"));
+        const adapter = createTestAdapter(searchLogsStub);
+
+        await adapter.onMessage({
+            from: "system.adapter.admin.0",
+            command: "searchLogs",
+            message: {},
+            callback: { message: "cb" },
+        });
+
+        expect(adapter.sendTo.calledOnce).to.equal(true);
+        expect(adapter.sendTo.firstCall.args[2]).to.deep.equal({
+            ok: false,
+            error: "boom",
+        });
     });
 });
