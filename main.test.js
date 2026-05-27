@@ -42,7 +42,7 @@ describe("onMessage searchLogs handler", () => {
                     defaultHours: 6,
                     defaultMaxRows: 500,
                 };
-                this.log = { error: sinon.stub() };
+                this.log = { error: sinon.stub(), debug: sinon.stub() };
                 this.sendTo = sinon.stub();
             }
             on() {}
@@ -72,7 +72,7 @@ describe("onMessage searchLogs handler", () => {
         });
 
         expect(searchLogsStub.calledOnce).to.equal(true);
-        expect(searchLogsStub.firstCall.args[0]).to.deep.equal({
+        expect(searchLogsStub.firstCall.args[0]).to.include({
             logDirectory: "/configured/log/dir",
             searchText: "17",
             hours: 6,
@@ -80,6 +80,7 @@ describe("onMessage searchLogs handler", () => {
             maxRows: 500,
             includeGzip: false,
         });
+        expect(searchLogsStub.firstCall.args[0].debugLog).to.be.a("function");
         expect(adapter.sendTo.calledOnce).to.equal(true);
     });
 
