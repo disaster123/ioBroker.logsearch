@@ -1,153 +1,249 @@
 import React from "react";
 import { withStyles } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
-import Input from "@material-ui/core/Input";
-import FormHelperText from "@material-ui/core/FormHelperText";
+import Button from "@material-ui/core/Button";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Checkbox from "@material-ui/core/Checkbox";
-import I18n from "@iobroker/adapter-react/i18n";
+import FormHelperText from "@material-ui/core/FormHelperText";
+import InputLabel from "@material-ui/core/InputLabel";
+import Paper from "@material-ui/core/Paper";
+import Typography from "@material-ui/core/Typography";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
 
-/**
- * @type {() => Record<string, import("@material-ui/core/styles/withStyles").CreateCSSProperties>}
- */
-const styles = () => ({
-    input: {
-        marginTop: 0,
-        minWidth: 400,
+const styles = (theme) => ({
+    root: {
+        display: "flex",
+        flexDirection: "column",
+        gap: theme.spacing(2),
     },
-    button: {
-        marginRight: 20,
+    controlsGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: theme.spacing(2),
+        alignItems: "end",
     },
-    card: {
-        maxWidth: 345,
-        textAlign: "center",
+    actions: {
+        display: "flex",
+        gap: theme.spacing(1),
+        alignItems: "center",
     },
-    media: {
-        height: 180,
+    tableCellMessage: {
+        whiteSpace: "normal",
+        wordBreak: "break-word",
     },
-    column: {
-        display: "inline-block",
-        verticalAlign: "top",
-        marginRight: 20,
+    levelError: { color: theme.palette.error.main, fontWeight: 600 },
+    levelWarn: { color: "#c77700", fontWeight: 600 },
+    levelInfo: { opacity: 0.9 },
+    levelDebug: { opacity: 0.7 },
+    levelSilly: { opacity: 0.6 },
+    resultBox: {
+        padding: theme.spacing(2),
     },
-    columnLogo: {
-        width: 350,
-        marginRight: 0,
-    },
-    columnSettings: {
-        width: "calc(100% - 370px)",
-    },
-    controlElement: {
-        //background: "#d2d2d2",
-        marginBottom: 5,
+    errorText: {
+        color: theme.palette.error.main,
     },
 });
 
-/**
- * @typedef {object} SettingsProps
- * @property {Record<string, string>} classes
- * @property {Record<string, any>} native
- * @property {(attr: string, value: any) => void} onChange
- */
-
-/**
- * @typedef {object} SettingsState
- * @property {undefined} [dummy] Delete this and add your own state properties here
- */
-
-/**
- * @extends {React.Component<SettingsProps, SettingsState>}
- */
 class Settings extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {};
+        this.state = this.createInitialState(props.native);
     }
 
-    /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {string} type
-     */
-    renderInput(title, attr, type) {
-        return (
-            <TextField
-                label={I18n.t(title)}
-                className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-                value={this.props.native[attr]}
-                type={type || "text"}
-                onChange={(e) => this.props.onChange(attr, e.target.value)}
-                margin="normal"
-            />
-        );
-    }
-
-    /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {{ value: string; title: AdminWord }[]} options
-     * @param {React.CSSProperties} [style]
-     */
-    renderSelect(title, attr, options, style) {
-        return (
-            <FormControl
-                className={`${this.props.classes.input} ${this.props.classes.controlElement}`}
-                style={{
-                    paddingTop: 5,
-                    ...style
-                }}
-            >
-                <Select
-                    value={this.props.native[attr] || "_"}
-                    onChange={(e) => this.props.onChange(attr, e.target.value === "_" ? "" : e.target.value)}
-                    input={<Input name={attr} id={attr + "-helper"} />}
-                >
-                    {options.map((item) => (
-                        <MenuItem key={"key-" + item.value} value={item.value || "_"}>
-                            {I18n.t(item.title)}
-                        </MenuItem>
-                    ))}
-                </Select>
-                <FormHelperText>{I18n.t(title)}</FormHelperText>
-            </FormControl>
-        );
-    }
-
-    /**
-     * @param {AdminWord} title
-     * @param {string} attr
-     * @param {React.CSSProperties} [style]
-     */
-    renderCheckbox(title, attr, style) {
-        return (
-            <FormControlLabel
-                key={attr}
-                style={{
-                    paddingTop: 5,
-                    ...style
-                }}
-                className={this.props.classes.controlElement}
-                control={
-                    <Checkbox
-                        checked={this.props.native[attr]}
-                        onChange={() => this.props.onChange(attr, !this.props.native[attr])}
-                        color="primary"
-                    />
+    componentDidUpdate(prevProps) {
+        if (prevProps.native !== this.props.native) {
+            this.setState((prevState) => {
+                if (prevState.hasSearched || prevState.loading) {
+                    return null;
                 }
-                label={I18n.t(title)}
-            />
-        );
+                return this.createInitialState(this.props.native);
+            });
+        }
+    }
+
+    createInitialState(native) {
+        return {
+            searchText: "",
+            hours: this.getNumberOrDefault(native?.defaultHours, 6),
+            level: "all",
+            maxRows: this.getNumberOrDefault(native?.defaultMaxRows, 500),
+            includeGzip: typeof native?.includeGzip === "boolean" ? native.includeGzip : true,
+            loading: false,
+            error: "",
+            rows: [],
+            truncated: false,
+            hasSearched: false,
+        };
+    }
+
+    getNumberOrDefault(value, fallback) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    getLevelClass(level) {
+        const { classes } = this.props;
+        switch (level) {
+            case "error": return classes.levelError;
+            case "warn": return classes.levelWarn;
+            case "debug": return classes.levelDebug;
+            case "silly": return classes.levelSilly;
+            case "info":
+            default:
+                return classes.levelInfo;
+        }
+    }
+
+    async onSearch() {
+        const { sendTo } = this.props;
+        const payload = {
+            searchText: this.state.searchText,
+            hours: this.getNumberOrDefault(this.state.hours, 6),
+            level: this.state.level,
+            maxRows: this.getNumberOrDefault(this.state.maxRows, 500),
+            includeGzip: !!this.state.includeGzip,
+        };
+
+        this.setState({ loading: true, error: "", hasSearched: true });
+        try {
+            const response = await sendTo("searchLogs", payload);
+            if (!response || response.error) {
+                throw new Error(response?.error || "Unknown error");
+            }
+
+            const rows = Array.isArray(response.rows) ? [...response.rows] : [];
+            rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            this.setState({
+                rows,
+                truncated: !!response.truncated,
+                loading: false,
+            });
+        } catch (error) {
+            this.setState({
+                loading: false,
+                rows: [],
+                truncated: false,
+                error: error?.message || "Search failed",
+            });
+        }
+    }
+
+    onClear() {
+        this.setState({
+            searchText: "",
+            error: "",
+            rows: [],
+            truncated: false,
+            hasSearched: false,
+        });
     }
 
     render() {
+        const { classes } = this.props;
+
         return (
-            <form className={this.props.classes.tab}>
-                {this.renderCheckbox("option1", "option1")}<br />
-                {this.renderInput("option2", "option2", "text")}
-            </form>
+            <div className={classes.root}>
+                <div className={classes.controlsGrid}>
+                    <TextField
+                        label="Search text"
+                        value={this.state.searchText}
+                        onChange={(e) => this.setState({ searchText: e.target.value })}
+                        fullWidth
+                    />
+                    <TextField
+                        label="Hours"
+                        type="number"
+                        value={this.state.hours}
+                        onChange={(e) => this.setState({ hours: e.target.value })}
+                        fullWidth
+                    />
+                    <FormControl fullWidth>
+                        <InputLabel>Level</InputLabel>
+                        <Select
+                            value={this.state.level}
+                            onChange={(e) => this.setState({ level: e.target.value })}
+                        >
+                            {["all", "error", "warn", "info", "debug", "silly"].map(level => (
+                                <MenuItem key={level} value={level}>{level}</MenuItem>
+                            ))}
+                        </Select>
+                        <FormHelperText>Log level filter</FormHelperText>
+                    </FormControl>
+                    <TextField
+                        label="Max rows"
+                        type="number"
+                        value={this.state.maxRows}
+                        onChange={(e) => this.setState({ maxRows: e.target.value })}
+                        fullWidth
+                    />
+                    <FormControlLabel
+                        control={(
+                            <Checkbox
+                                checked={this.state.includeGzip}
+                                onChange={() => this.setState({ includeGzip: !this.state.includeGzip })}
+                                color="primary"
+                            />
+                        )}
+                        label="Include gzip"
+                    />
+                </div>
+
+                <div className={classes.actions}>
+                    <Button variant="contained" color="primary" disabled={this.state.loading} onClick={() => this.onSearch()}>
+                        Search
+                    </Button>
+                    <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()}>
+                        Clear
+                    </Button>
+                    {this.state.loading ? <CircularProgress size={24} /> : null}
+                </div>
+
+                {this.state.error ? (
+                    <Typography className={classes.errorText}>Error: {this.state.error}</Typography>
+                ) : null}
+
+                {this.state.hasSearched && !this.state.error ? (
+                    <Paper className={classes.resultBox}>
+                        <Typography>Hits: {this.state.rows.length}</Typography>
+                        {this.state.truncated ? (
+                            <Typography>Only the maximum number of results is shown.</Typography>
+                        ) : null}
+                    </Paper>
+                ) : null}
+
+                {this.state.rows.length ? (
+                    <Paper>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Time</TableCell>
+                                    <TableCell>Level</TableCell>
+                                    <TableCell>Source</TableCell>
+                                    <TableCell>Message</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {this.state.rows.map((row, index) => (
+                                    <TableRow key={`${row.ts || "no-ts"}-${row.source || "src"}-${index}`}>
+                                        <TableCell>{row.ts ? new Date(row.ts).toLocaleString() : ""}</TableCell>
+                                        <TableCell className={this.getLevelClass(row.level)}>{row.level}</TableCell>
+                                        <TableCell>{row.source}</TableCell>
+                                        <TableCell className={classes.tableCellMessage}>{row.message}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Paper>
+                ) : null}
+            </div>
         );
     }
 }
