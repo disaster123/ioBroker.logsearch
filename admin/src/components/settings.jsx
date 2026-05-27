@@ -115,12 +115,11 @@ class Settings extends React.Component {
         this.setState({ loading: true, error: "", hasSearched: true });
         try {
             const response = await sendTo("searchLogs", payload);
-            if (!response || response.error) {
-                throw new Error(response?.error || "Unknown error");
+            if (response?.ok === false) {
+                throw new Error(response.error || "Search failed");
             }
 
-            const rows = Array.isArray(response.rows) ? [...response.rows] : [];
-            rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            const rows = Array.isArray(response?.rows) ? response.rows : [];
             this.setState({
                 rows,
                 truncated: !!response.truncated,
@@ -143,6 +142,7 @@ class Settings extends React.Component {
             rows: [],
             truncated: false,
             hasSearched: false,
+            loading: false,
         });
     }
 
@@ -214,7 +214,7 @@ class Settings extends React.Component {
                     <Paper className={classes.resultBox}>
                         <Typography>Hits: {this.state.rows.length}</Typography>
                         {this.state.truncated ? (
-                            <Typography>Only the maximum number of results is shown.</Typography>
+                            <Typography>Only the first {this.state.rows.length} results are shown. Increase max rows or narrow the search.</Typography>
                         ) : null}
                     </Paper>
                 ) : null}
@@ -233,7 +233,7 @@ class Settings extends React.Component {
                             <TableBody>
                                 {this.state.rows.map((row, index) => (
                                     <TableRow key={`${row.ts || "no-ts"}-${row.source || "src"}-${index}`}>
-                                        <TableCell>{row.ts ? new Date(row.ts).toLocaleString() : ""}</TableCell>
+                                        <TableCell>{row.ts || ""}</TableCell>
                                         <TableCell className={this.getLevelClass(row.level)}>{row.level}</TableCell>
                                         <TableCell>{row.source}</TableCell>
                                         <TableCell className={classes.tableCellMessage}>{row.message}</TableCell>
