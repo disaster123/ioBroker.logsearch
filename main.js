@@ -7,6 +7,7 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require("@iobroker/adapter-core");
+const { searchLogs } = require("./lib/log-search");
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -24,7 +25,7 @@ class Logsearch extends utils.Adapter {
         this.on("ready", this.onReady.bind(this));
         this.on("stateChange", this.onStateChange.bind(this));
         // this.on("objectChange", this.onObjectChange.bind(this));
-        // this.on("message", this.onMessage.bind(this));
+        this.on("message", this.onMessage.bind(this));
         this.on("unload", this.onUnload.bind(this));
     }
 
@@ -32,57 +33,7 @@ class Logsearch extends utils.Adapter {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        // Initialize your adapter here
-
-        // The adapters config (in the instance object everything under the attribute "native") is accessible via
-        // this.config:
-        this.log.info("config option1: " + this.config.option1);
-        this.log.info("config option2: " + this.config.option2);
-
-        /*
-        For every state in the system there has to be also an object of type state
-        Here a simple template for a boolean variable named "testVariable"
-        Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-        */
-        await this.setObjectNotExistsAsync("testVariable", {
-            type: "state",
-            common: {
-                name: "testVariable",
-                type: "boolean",
-                role: "indicator",
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
-
-        // In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-        this.subscribeStates("testVariable");
-        // You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-        // this.subscribeStates("lights.*");
-        // Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-        // this.subscribeStates("*");
-
-        /*
-            setState examples
-            you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-        */
-        // the variable testVariable is set to true as command (ack=false)
-        await this.setStateAsync("testVariable", true);
-
-        // same thing, but the value is flagged "ack"
-        // ack should be always set to true if the value is received from or acknowledged from the target system
-        await this.setStateAsync("testVariable", { val: true, ack: true });
-
-        // same thing, but the state is deleted after 30s (getState will return null afterwards)
-        await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
-
-        // examples for the checkPassword/checkGroup functions
-        let result = await this.checkPasswordAsync("admin", "iobroker");
-        this.log.info("check user admin pw iobroker: " + result);
-
-        result = await this.checkGroupAsync("admin", "admin");
-        this.log.info("check group user admin group admin: " + result);
+        this.log.debug("Adapter started");
     }
 
     /**
@@ -135,23 +86,56 @@ class Logsearch extends utils.Adapter {
         }
     }
 
-    // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-    // /**
-    //  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-    //  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-    //  * @param {ioBroker.Message} obj
-    //  */
-    // onMessage(obj) {
-    //     if (typeof obj === "object" && obj.message) {
-    //         if (obj.command === "send") {
-    //             // e.g. send email or pushover or whatever
-    //             this.log.info("send command");
+    /**
+     * Some message was sent to this instance over message box.
+     * @param {ioBroker.Message} obj
+     */
+    async onMessage(obj) {
+        if (!obj || obj.command !== "searchLogs") {
+            return;
+        }
 
-    //             // Send response in callback if required
-    //             if (obj.callback) this.sendTo(obj.from, obj.command, "Message received", obj.callback);
-    //         }
-    //     }
-    // }
+        const message = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
+        const includeGzipValue = message.includeGzip;
+        let includeGzip = this.config.includeGzip !== false;
+        if (typeof includeGzipValue === "boolean") {
+            includeGzip = includeGzipValue;
+        } else if (typeof includeGzipValue === "string") {
+            if (includeGzipValue === "true") {
+                includeGzip = true;
+            } else if (includeGzipValue === "false") {
+                includeGzip = false;
+            }
+        } else if (typeof includeGzipValue === "number") {
+            if (includeGzipValue === 0) {
+                includeGzip = false;
+            } else if (includeGzipValue === 1) {
+                includeGzip = true;
+            }
+        }
+
+        const options = {
+            logDirectory: typeof this.config.logDirectory === "string" ? this.config.logDirectory : "/opt/iobroker/log",
+            searchText: String(message.searchText ?? ""),
+            hours: Number(message.hours ?? this.config.defaultHours ?? 6),
+            level: typeof message.level === "string" ? message.level : "all",
+            maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
+            includeGzip,
+        };
+
+        try {
+            const result = await searchLogs(options);
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, result, obj.callback);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log.error(`searchLogs failed: ${errorMessage}`);
+            if (obj.callback) {
+                this.sendTo(obj.from, obj.command, { ok: false, error: errorMessage }, obj.callback);
+            }
+        }
+    }
 
 }
 
