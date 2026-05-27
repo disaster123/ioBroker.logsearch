@@ -121,6 +121,7 @@ class Logsearch extends utils.Adapter {
             level: typeof message.level === "string" ? message.level : "all",
             maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
             includeGzip,
+            debugLog: message => this.log.debug(message),
         };
 
         try {
