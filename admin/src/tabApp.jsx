@@ -11,10 +11,17 @@ class TabApp extends React.Component {
         this.socket = new AdminConnection(props);
         this.state = {
             socketReady: false,
+            defaultHours: 72,
+            defaultMaxRows: 500,
+            defaultsLoaded: false,
         };
+        this.defaultsLoading = false;
 
         this.onConnectionChange = connected => {
             this.setState({ socketReady: connected });
+            if (connected) {
+                this.loadInstanceDefaults();
+            }
         };
 
         this.socket.registerConnectionHandler(this.onConnectionChange);
@@ -47,6 +54,32 @@ class TabApp extends React.Component {
         return normalize(instance) || normalize(adapter) || "logsearch.0";
     }
 
+
+
+    async loadInstanceDefaults() {
+        if (this.defaultsLoading || this.state.defaultsLoaded) {
+            return;
+        }
+        this.defaultsLoading = true;
+        const instance = this.getInstanceFromUrl();
+        const objectId = `system.adapter.${instance}`;
+
+        try {
+            const instanceObject = await this.socket.getObject(objectId);
+            const defaultHours = Number(instanceObject?.native?.defaultHours);
+            const defaultMaxRows = Number(instanceObject?.native?.defaultMaxRows);
+
+            this.setState({
+                defaultHours: Number.isFinite(defaultHours) && defaultHours > 0 ? defaultHours : 72,
+                defaultMaxRows: Number.isFinite(defaultMaxRows) && defaultMaxRows > 0 ? defaultMaxRows : 500,
+                defaultsLoaded: true,
+            });
+        } catch {
+            this.setState({ defaultHours: 72, defaultMaxRows: 500, defaultsLoaded: true });
+        } finally {
+            this.defaultsLoading = false;
+        }
+    }
     sendTo = (command, message) => {
         if (!this.socket || !this.state.socketReady) {
             return Promise.reject(new Error("Socket connection is not ready"));
@@ -59,12 +92,14 @@ class TabApp extends React.Component {
         return (
             <div className="App">
                 {!this.state.socketReady ? <div>Connecting to ioBroker...</div> : null}
-                <LogSearchTab
-                    defaultHours={6}
-                    defaultMaxRows={500}
-                    includeGzip={true}
-                    sendTo={this.sendTo}
-                />
+                {this.state.socketReady && !this.state.defaultsLoaded ? <div>Loading defaults...</div> : null}
+                {this.state.defaultsLoaded ? (
+                    <LogSearchTab
+                        defaultHours={this.state.defaultHours}
+                        defaultMaxRows={this.state.defaultMaxRows}
+                        sendTo={this.sendTo}
+                    />
+                ) : null}
             </div>
         );
     }
