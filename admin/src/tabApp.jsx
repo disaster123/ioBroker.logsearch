@@ -11,10 +11,15 @@ class TabApp extends React.Component {
         this.socket = new AdminConnection(props);
         this.state = {
             socketReady: false,
+            defaultHours: 72,
+            defaultMaxRows: 500,
         };
 
         this.onConnectionChange = connected => {
             this.setState({ socketReady: connected });
+            if (connected) {
+                this.loadInstanceDefaults();
+            }
         };
 
         this.socket.registerConnectionHandler(this.onConnectionChange);
@@ -47,6 +52,25 @@ class TabApp extends React.Component {
         return normalize(instance) || normalize(adapter) || "logsearch.0";
     }
 
+
+
+    async loadInstanceDefaults() {
+        const instance = this.getInstanceFromUrl();
+        const objectId = `system.adapter.${instance}`;
+
+        try {
+            const instanceObject = await this.socket.getObject(objectId);
+            const defaultHours = Number(instanceObject?.native?.defaultHours);
+            const defaultMaxRows = Number(instanceObject?.native?.defaultMaxRows);
+
+            this.setState({
+                defaultHours: Number.isFinite(defaultHours) && defaultHours > 0 ? defaultHours : 72,
+                defaultMaxRows: Number.isFinite(defaultMaxRows) && defaultMaxRows > 0 ? defaultMaxRows : 500,
+            });
+        } catch (error) {
+            this.setState({ defaultHours: 72, defaultMaxRows: 500 });
+        }
+    }
     sendTo = (command, message) => {
         if (!this.socket || !this.state.socketReady) {
             return Promise.reject(new Error("Socket connection is not ready"));
@@ -60,8 +84,8 @@ class TabApp extends React.Component {
             <div className="App">
                 {!this.state.socketReady ? <div>Connecting to ioBroker...</div> : null}
                 <LogSearchTab
-                    defaultHours={72}
-                    defaultMaxRows={500}
+                    defaultHours={this.state.defaultHours}
+                    defaultMaxRows={this.state.defaultMaxRows}
                     sendTo={this.sendTo}
                 />
             </div>
