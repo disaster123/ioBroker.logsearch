@@ -1,7 +1,7 @@
 import React from "react";
 import { withStyles } from "@mui/styles";
 
-import { GenericApp } from "@iobroker/adapter-react-v5";
+import { AdminConnection, GenericApp } from "@iobroker/adapter-react-v5";
 import Settings from "./components/settings";
 
 /**
@@ -15,6 +15,7 @@ class App extends GenericApp {
     constructor(props) {
         const extendedProps = {
             ...props,
+            Connection: AdminConnection,
             encryptedFields: [],
             translations: {
                 "en": require("./i18n/en.json"),
@@ -29,7 +30,7 @@ class App extends GenericApp {
                 "zh-cn": require("./i18n/zh-cn.json"),
             },
         };
-        super(props, extendedProps);
+        super(extendedProps);
     }
 
     onConnectionReady() {
