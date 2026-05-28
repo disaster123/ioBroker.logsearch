@@ -54,10 +54,14 @@ class LogSearchTab extends React.Component {
         this.pendingSearch = false;
         this.searchInFlight = false;
         this.searchGeneration = 0;
+        this.unmounted = false;
     }
 
     componentWillUnmount() {
+        this.unmounted = true;
         this.clearSearchDebounce();
+        this.pendingSearch = false;
+        this.searchGeneration += 1;
     }
 
     clearSearchDebounce() {
@@ -91,6 +95,9 @@ class LogSearchTab extends React.Component {
     }
 
     runSearch = async () => {
+        if (this.unmounted) {
+            return;
+        }
         if (this.searchInFlight) {
             this.pendingSearch = true;
             return;
@@ -115,7 +122,7 @@ class LogSearchTab extends React.Component {
             if (response?.ok === false) {
                 throw new Error(response.error || "Search failed");
             }
-            if (currentGeneration === this.searchGeneration) {
+            if (!this.unmounted && currentGeneration === this.searchGeneration) {
                 this.setState({
                     rows: Array.isArray(response?.rows) ? response.rows : [],
                     truncated: !!response?.truncated,
@@ -123,7 +130,7 @@ class LogSearchTab extends React.Component {
                 });
             }
         } catch (error) {
-            if (currentGeneration === this.searchGeneration) {
+            if (!this.unmounted && currentGeneration === this.searchGeneration) {
                 this.setState({
                     loading: false,
                     rows: [],
@@ -133,6 +140,9 @@ class LogSearchTab extends React.Component {
             }
         } finally {
             this.searchInFlight = false;
+            if (this.unmounted) {
+                return;
+            }
             if (currentGeneration !== this.searchGeneration && this.state.loading) {
                 this.setState({ loading: false });
             }
@@ -163,6 +173,9 @@ class LogSearchTab extends React.Component {
     }
 
     onFieldChange = (field, value) => {
+        if (this.searchInFlight) {
+            this.searchGeneration += 1;
+        }
         this.setState({ [field]: value }, () => this.queueDebouncedSearch());
     };
 
