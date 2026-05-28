@@ -38,8 +38,7 @@ describe("onMessage searchLogs handler", () => {
                 this.options = options;
                 this.config = {
                     logDirectory: "/configured/log/dir",
-                    includeGzip: true,
-                    defaultHours: 6,
+                    defaultHours: 72,
                     defaultMaxRows: 500,
                 };
                 this.log = { error: sinon.stub(), debug: sinon.stub() };
@@ -55,7 +54,7 @@ describe("onMessage searchLogs handler", () => {
         return createAdapter();
     }
 
-    it("should use config logDirectory/defaults and sanitize includeGzip string", async () => {
+    it("should use config logDirectory/defaults and always force includeGzip", async () => {
         const searchLogsStub = sinon.stub().resolves({ ok: true, rows: [], total: 0, truncated: false });
         const adapter = createTestAdapter(searchLogsStub);
 
@@ -75,10 +74,10 @@ describe("onMessage searchLogs handler", () => {
         expect(searchLogsStub.firstCall.args[0]).to.include({
             logDirectory: "/configured/log/dir",
             searchText: "17",
-            hours: 6,
+            hours: 72,
             level: "all",
             maxRows: 500,
-            includeGzip: false,
+            includeGzip: true,
         });
         expect(searchLogsStub.firstCall.args[0].debugLog).to.be.a("function");
         expect(adapter.sendTo.calledOnce).to.equal(true);

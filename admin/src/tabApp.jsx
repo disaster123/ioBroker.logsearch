@@ -60,9 +60,8 @@ class TabApp extends React.Component {
             <div className="App">
                 {!this.state.socketReady ? <div>Connecting to ioBroker...</div> : null}
                 <LogSearchTab
-                    defaultHours={6}
+                    defaultHours={72}
                     defaultMaxRows={500}
-                    includeGzip={true}
                     sendTo={this.sendTo}
                 />
             </div>

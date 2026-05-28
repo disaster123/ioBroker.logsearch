@@ -96,31 +96,14 @@ class Logsearch extends utils.Adapter {
         }
 
         const message = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
-        const includeGzipValue = message.includeGzip;
-        let includeGzip = this.config.includeGzip !== false;
-        if (typeof includeGzipValue === "boolean") {
-            includeGzip = includeGzipValue;
-        } else if (typeof includeGzipValue === "string") {
-            if (includeGzipValue === "true") {
-                includeGzip = true;
-            } else if (includeGzipValue === "false") {
-                includeGzip = false;
-            }
-        } else if (typeof includeGzipValue === "number") {
-            if (includeGzipValue === 0) {
-                includeGzip = false;
-            } else if (includeGzipValue === 1) {
-                includeGzip = true;
-            }
-        }
 
         const options = {
             logDirectory: typeof this.config.logDirectory === "string" ? this.config.logDirectory : "/opt/iobroker/log",
             searchText: String(message.searchText ?? ""),
-            hours: Number(message.hours ?? this.config.defaultHours ?? 6),
+            hours: Number(message.hours ?? this.config.defaultHours ?? 72),
             level: typeof message.level === "string" ? message.level : "all",
             maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
-            includeGzip,
+            includeGzip: true,
             debugLog: message => this.log.debug(message),
         };
 
