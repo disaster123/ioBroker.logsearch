@@ -1,30 +1,29 @@
 import React from "react";
 import { withStyles } from "@material-ui/core/styles";
-import GenericApp from "@iobroker/adapter-react/GenericApp";
+import Connection from "@iobroker/adapter-react/Connection";
 import LogSearchTab from "./components/logSearchTab";
 
 const styles = () => ({ root: {} });
 
-class TabApp extends GenericApp {
+class TabApp extends React.Component {
     constructor(props) {
-        const extendedProps = {
-            ...props,
-            encryptedFields: [],
-            translations: {
-                "en": require("./i18n/en.json"),
-                "de": require("./i18n/de.json"),
-                "ru": require("./i18n/ru.json"),
-                "pt": require("./i18n/pt.json"),
-                "nl": require("./i18n/nl.json"),
-                "fr": require("./i18n/fr.json"),
-                "it": require("./i18n/it.json"),
-                "es": require("./i18n/es.json"),
-                "pl": require("./i18n/pl.json"),
-                "uk": require("./i18n/uk.json"),
-                "zh-cn": require("./i18n/zh-cn.json"),
-            },
+        super(props);
+        this.socket = new Connection(props);
+        this.state = {
+            socketReady: false,
         };
-        super(props, extendedProps);
+
+        this.onConnectionChange = connected => {
+            this.setState({ socketReady: connected });
+        };
+
+        this.socket.registerConnectionHandler(this.onConnectionChange);
+    }
+
+    componentWillUnmount() {
+        if (this.socket && this.onConnectionChange) {
+            this.socket.unregisterConnectionHandler(this.onConnectionChange);
+        }
     }
 
     getInstanceFromUrl() {
@@ -48,18 +47,23 @@ class TabApp extends GenericApp {
         return normalize(instance) || normalize(adapter) || "logsearch.0";
     }
 
-    render() {
-        if (!this.state.loaded) {
-            return super.render();
+    sendTo = (command, message) => {
+        if (!this.socket || !this.state.socketReady) {
+            return Promise.reject(new Error("Socket connection is not ready"));
         }
         const instance = this.getInstanceFromUrl();
+        return Promise.resolve(this.socket.sendTo(instance, command, message));
+    };
+
+    render() {
         return (
             <div className="App">
+                {!this.state.socketReady ? <div>Connecting to ioBroker...</div> : null}
                 <LogSearchTab
-                    defaultHours={this.state.native?.defaultHours}
-                    defaultMaxRows={this.state.native?.defaultMaxRows}
-                    includeGzip={this.state.native?.includeGzip}
-                    sendTo={(command, message) => this.socket.sendTo(instance, command, message)}
+                    defaultHours={6}
+                    defaultMaxRows={500}
+                    includeGzip={true}
+                    sendTo={this.sendTo}
                 />
             </div>
         );

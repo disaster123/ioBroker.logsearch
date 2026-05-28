@@ -47,7 +47,6 @@ class App extends GenericApp {
                 <Settings
                     native={this.state.native}
                     onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                    sendTo={(command, message) => this.socket.sendTo(this.instance, command, message)}
                 />
                 {this.renderError()}
                 {this.renderToast()}
