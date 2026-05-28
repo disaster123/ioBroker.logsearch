@@ -78,9 +78,47 @@ describe("onMessage searchLogs handler", () => {
             level: "all",
             maxRows: 500,
             includeGzip: true,
+            activeOnly: false,
         });
         expect(searchLogsStub.firstCall.args[0].debugLog).to.be.a("function");
         expect(adapter.sendTo.calledOnce).to.equal(true);
+    });
+
+
+    it("should accept activeOnly and sanitized cursor while still forcing includeGzip", async () => {
+        const searchLogsStub = sinon.stub().resolves({ ok: true, rows: [], total: 0, truncated: false });
+        const adapter = createTestAdapter(searchLogsStub);
+
+        await adapter.onMessage({
+            from: "system.adapter.admin.0",
+            command: "searchLogs",
+            message: {
+                activeOnly: true,
+                includeGzip: false,
+                cursor: {
+                    file: "iobroker.current.log",
+                    byteOffset: "123",
+                    lineNumber: "4",
+                    size: "456",
+                    mtimeMs: "789",
+                    ignored: "value",
+                },
+            },
+            callback: { message: "cb" },
+        });
+
+        expect(searchLogsStub.calledOnce).to.equal(true);
+        expect(searchLogsStub.firstCall.args[0]).to.include({
+            includeGzip: true,
+            activeOnly: true,
+        });
+        expect(searchLogsStub.firstCall.args[0].cursor).to.deep.equal({
+            file: "iobroker.current.log",
+            byteOffset: 123,
+            lineNumber: 4,
+            size: 456,
+            mtimeMs: 789,
+        });
     });
 
     it("should not crash when callback is missing", async () => {

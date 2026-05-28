@@ -16,6 +16,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 
 const DEBOUNCE_MS = 700;
+const AUTO_UPDATE_MS = 5000;
 
 const styles = (theme) => ({
     root: { display: "flex", flexDirection: "column", gap: theme.spacing(2) },
@@ -49,17 +50,22 @@ class LogSearchTab extends React.Component {
             rows: [],
             truncated: false,
             hasSearched: false,
+            cursor: null,
+            autoUpdateActive: false,
         };
         this.searchDebounceTimer = null;
         this.pendingSearch = false;
         this.searchInFlight = false;
         this.searchGeneration = 0;
+        this.autoUpdateTimer = null;
+        this.autoUpdateInFlight = false;
         this.unmounted = false;
     }
 
     componentWillUnmount() {
         this.unmounted = true;
         this.clearSearchDebounce();
+        this.stopAutoUpdate();
         this.pendingSearch = false;
         this.searchGeneration += 1;
     }
@@ -70,6 +76,85 @@ class LogSearchTab extends React.Component {
             this.searchDebounceTimer = null;
         }
     }
+    stopAutoUpdate() {
+        if (this.autoUpdateTimer) {
+            clearInterval(this.autoUpdateTimer);
+            this.autoUpdateTimer = null;
+        }
+        this.autoUpdateInFlight = false;
+        if (!this.unmounted && this.state.autoUpdateActive) {
+            this.setState({ autoUpdateActive: false });
+        }
+    }
+
+    startAutoUpdate() {
+        this.stopAutoUpdate();
+        if (this.unmounted || !this.state.cursor) {
+            return;
+        }
+        this.autoUpdateTimer = setInterval(() => this.runAutoUpdate(), AUTO_UPDATE_MS);
+        this.setState({ autoUpdateActive: true });
+    }
+
+    getRowKey(row) {
+        return row?.rawPlain || row?.raw || `${row?.ts || ""}|${row?.level || ""}|${row?.source || ""}|${row?.message || ""}`;
+    }
+
+    mergeAutoUpdateRows(existingRows, newRows, maxRows) {
+        const seen = new Set();
+        const merged = [];
+        for (const row of [...newRows, ...existingRows]) {
+            const key = this.getRowKey(row);
+            if (seen.has(key)) {
+                continue;
+            }
+            seen.add(key);
+            merged.push(row);
+            if (merged.length >= maxRows) {
+                break;
+            }
+        }
+        return merged;
+    }
+
+    runAutoUpdate = async () => {
+        if (this.unmounted || this.searchInFlight || this.pendingSearch || this.autoUpdateInFlight || !this.state.cursor) {
+            return;
+        }
+
+        this.autoUpdateInFlight = true;
+        const currentGeneration = this.searchGeneration;
+        const maxRows = this.getNumberOrDefault(this.state.maxRows, 500);
+        const payload = {
+            searchText: this.state.searchText,
+            hours: this.getNumberOrDefault(this.state.hours, 72),
+            level: this.state.level,
+            maxRows,
+            activeOnly: true,
+            cursor: this.state.cursor,
+        };
+
+        try {
+            const response = await this.props.sendTo("searchLogs", payload);
+            if (response?.ok === false) {
+                throw new Error(response.error || "Auto update failed");
+            }
+            if (!this.unmounted && currentGeneration === this.searchGeneration) {
+                const responseRows = Array.isArray(response?.rows) ? response.rows : [];
+                this.setState((state) => ({
+                    rows: this.mergeAutoUpdateRows(state.rows, responseRows, maxRows),
+                    truncated: state.truncated || !!response?.truncated,
+                    cursor: response?.cursor || state.cursor,
+                    autoUpdateActive: true,
+                }));
+            }
+        } catch {
+            // Auto update is best-effort; keep the existing search result visible.
+        } finally {
+            this.autoUpdateInFlight = false;
+        }
+    };
+
 
     getNumberOrDefault(value, fallback) {
         const parsed = Number(value);
@@ -107,6 +192,7 @@ class LogSearchTab extends React.Component {
         }
 
         this.pendingSearch = false;
+        this.stopAutoUpdate();
         this.searchInFlight = true;
         const currentGeneration = ++this.searchGeneration;
         const payload = {
@@ -116,7 +202,7 @@ class LogSearchTab extends React.Component {
             maxRows: this.getNumberOrDefault(this.state.maxRows, 500),
         };
 
-        this.setState({ loading: true, error: "", hasSearched: true });
+        this.setState({ loading: true, error: "", hasSearched: true, cursor: null, autoUpdateActive: false });
         try {
             const response = await this.props.sendTo("searchLogs", payload);
             if (response?.ok === false) {
@@ -127,7 +213,8 @@ class LogSearchTab extends React.Component {
                     rows: Array.isArray(response?.rows) ? response.rows : [],
                     truncated: !!response?.truncated,
                     loading: false,
-                });
+                    cursor: response?.cursor || null,
+                }, () => this.startAutoUpdate());
             }
         } catch (error) {
             if (!this.unmounted && currentGeneration === this.searchGeneration) {
@@ -135,19 +222,20 @@ class LogSearchTab extends React.Component {
                     loading: false,
                     rows: [],
                     truncated: false,
+                    cursor: null,
+                    autoUpdateActive: false,
                     error: error?.message || "Search failed",
                 });
             }
         } finally {
             this.searchInFlight = false;
-            if (this.unmounted) {
-                return;
-            }
-            if (currentGeneration !== this.searchGeneration && this.state.loading) {
-                this.setState({ loading: false });
-            }
-            if (this.pendingSearch) {
-                this.runSearch();
+            if (!this.unmounted) {
+                if (currentGeneration !== this.searchGeneration && this.state.loading) {
+                    this.setState({ loading: false });
+                }
+                if (this.pendingSearch) {
+                    this.runSearch();
+                }
             }
         }
     };
@@ -160,6 +248,7 @@ class LogSearchTab extends React.Component {
 
     onClear() {
         this.clearSearchDebounce();
+        this.stopAutoUpdate();
         this.pendingSearch = false;
         this.searchGeneration += 1;
         this.setState({
@@ -169,10 +258,13 @@ class LogSearchTab extends React.Component {
             truncated: false,
             hasSearched: false,
             loading: false,
+            cursor: null,
+            autoUpdateActive: false,
         });
     }
 
     onFieldChange = (field, value) => {
+        this.stopAutoUpdate();
         if (this.searchInFlight) {
             this.searchGeneration += 1;
         }
@@ -237,6 +329,7 @@ class LogSearchTab extends React.Component {
                         Clear
                     </Button>
                     {this.state.loading ? <CircularProgress size={24} /> : null}
+                    {this.state.autoUpdateActive ? <Typography variant="caption">Auto update active</Typography> : null}
                 </div>
 
                 {this.state.error ? <Typography className={classes.errorText}>Error: {this.state.error}</Typography> : null}
@@ -265,8 +358,8 @@ class LogSearchTab extends React.Component {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {this.state.rows.map((row, index) => (
-                                    <TableRow key={`${row.ts || "no-ts"}-${row.source || "src"}-${index}`}>
+                                {this.state.rows.map((row) => (
+                                    <TableRow key={this.getRowKey(row)}>
                                         <TableCell>{row.ts || ""}</TableCell>
                                         <TableCell className={this.getLevelClass(row.level)}>{row.level}</TableCell>
                                         <TableCell>{row.source}</TableCell>
