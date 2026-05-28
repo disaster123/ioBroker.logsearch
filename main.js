@@ -97,6 +97,14 @@ class Logsearch extends utils.Adapter {
 
         const message = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
 
+        const cursor = typeof message.cursor === "object" && message.cursor !== null ? {
+            file: typeof message.cursor.file === "string" ? message.cursor.file : "",
+            byteOffset: Number(message.cursor.byteOffset),
+            lineNumber: Number(message.cursor.lineNumber),
+            size: Number(message.cursor.size),
+            mtimeMs: Number(message.cursor.mtimeMs),
+        } : undefined;
+
         const options = {
             logDirectory: typeof this.config.logDirectory === "string" ? this.config.logDirectory : "/opt/iobroker/log",
             searchText: String(message.searchText ?? ""),
@@ -104,6 +112,8 @@ class Logsearch extends utils.Adapter {
             level: typeof message.level === "string" ? message.level : "all",
             maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
             includeGzip: true,
+            activeOnly: message.activeOnly === true,
+            cursor,
             debugLog: message => this.log.debug(message),
         };
 
