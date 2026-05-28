@@ -52,6 +52,8 @@ class LogSearchTab extends React.Component {
         };
         this.searchDebounceTimer = null;
         this.pendingSearch = false;
+        this.searchInFlight = false;
+        this.searchGeneration = 0;
     }
 
     componentWillUnmount() {
@@ -89,7 +91,8 @@ class LogSearchTab extends React.Component {
     }
 
     runSearch = async () => {
-        if (this.state.loading) {
+        if (this.searchInFlight) {
+            this.pendingSearch = true;
             return;
         }
         if (!this.pendingSearch) {
@@ -97,6 +100,8 @@ class LogSearchTab extends React.Component {
         }
 
         this.pendingSearch = false;
+        this.searchInFlight = true;
+        const currentGeneration = ++this.searchGeneration;
         const payload = {
             searchText: this.state.searchText,
             hours: this.getNumberOrDefault(this.state.hours, 72),
@@ -110,19 +115,27 @@ class LogSearchTab extends React.Component {
             if (response?.ok === false) {
                 throw new Error(response.error || "Search failed");
             }
-            this.setState({
-                rows: Array.isArray(response?.rows) ? response.rows : [],
-                truncated: !!response?.truncated,
-                loading: false,
-            });
+            if (currentGeneration === this.searchGeneration) {
+                this.setState({
+                    rows: Array.isArray(response?.rows) ? response.rows : [],
+                    truncated: !!response?.truncated,
+                    loading: false,
+                });
+            }
         } catch (error) {
-            this.setState({
-                loading: false,
-                rows: [],
-                truncated: false,
-                error: error?.message || "Search failed",
-            });
+            if (currentGeneration === this.searchGeneration) {
+                this.setState({
+                    loading: false,
+                    rows: [],
+                    truncated: false,
+                    error: error?.message || "Search failed",
+                });
+            }
         } finally {
+            this.searchInFlight = false;
+            if (currentGeneration !== this.searchGeneration && this.state.loading) {
+                this.setState({ loading: false });
+            }
             if (this.pendingSearch) {
                 this.runSearch();
             }
@@ -138,6 +151,7 @@ class LogSearchTab extends React.Component {
     onClear() {
         this.clearSearchDebounce();
         this.pendingSearch = false;
+        this.searchGeneration += 1;
         this.setState({
             searchText: "",
             error: "",
