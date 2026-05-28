@@ -22,18 +22,18 @@ const styles = (theme) => ({
     root: {
         display: "flex",
         flexDirection: "column",
-        gap: theme.spacing(2),
+        gap: theme.spacing(1.25),
         height: "100vh",
         minHeight: 0,
         boxSizing: "border-box",
-        padding: theme.spacing(9, 2, 2),
+        padding: theme.spacing(3, 2, 2),
         overflow: "hidden",
         background: theme.palette.background.default,
         [theme.breakpoints.down("sm")]: {
             height: "auto",
             minHeight: "100vh",
             overflow: "visible",
-            padding: theme.spacing(8, 1.5, 1.5),
+            padding: theme.spacing(3, 1.5, 1.5),
         },
     },
     panel: {
@@ -43,20 +43,16 @@ const styles = (theme) => ({
         boxShadow: theme.shadows[1],
     },
     searchPanel: {
-        padding: theme.spacing(2),
+        padding: theme.spacing(1.25, 1.5),
         flex: "0 0 auto",
         position: "sticky",
         top: 0,
         zIndex: 2,
     },
-    panelTitle: {
-        fontWeight: 600,
-        marginBottom: theme.spacing(1.5),
-    },
     controlsGrid: {
         display: "grid",
         gridTemplateColumns: "minmax(320px, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(110px, 130px)",
-        gap: theme.spacing(1.5),
+        gap: theme.spacing(1),
         alignItems: "center",
         [theme.breakpoints.down("md")]: {
             gridTemplateColumns: "minmax(260px, 1fr) repeat(3, minmax(96px, 1fr))",
@@ -74,27 +70,39 @@ const styles = (theme) => ({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: theme.spacing(1.5),
+        gap: theme.spacing(0.75),
         flexWrap: "wrap",
-        marginTop: theme.spacing(1.5),
+        marginTop: theme.spacing(0.75),
     },
     buttonGroup: {
         display: "inline-flex",
         alignItems: "center",
-        gap: theme.spacing(1),
+        gap: theme.spacing(0.75),
         flexWrap: "wrap",
     },
-    autoUpdateBadge: {
+    statusBadges: {
         display: "inline-flex",
         alignItems: "center",
-        minHeight: 24,
-        padding: theme.spacing(0.25, 1),
+        justifyContent: "flex-end",
+        gap: theme.spacing(0.75),
+        flexWrap: "wrap",
+    },
+    statusBadge: {
+        display: "inline-flex",
+        alignItems: "center",
+        minHeight: 22,
+        padding: theme.spacing(0.125, 0.75),
         borderRadius: 999,
         color: theme.palette.text.secondary,
         background: theme.palette.action.selected,
         border: `1px solid ${theme.palette.divider}`,
         fontSize: 12,
-        lineHeight: 1.5,
+        lineHeight: 1.4,
+    },
+    truncatedBadge: {
+        color: theme.palette.warning.dark,
+        background: theme.palette.warning.light,
+        borderColor: theme.palette.warning.main,
     },
     resultsPanel: {
         display: "flex",
@@ -103,18 +111,6 @@ const styles = (theme) => ({
         flex: "1 1 auto",
         overflow: "hidden",
     },
-    resultsStatus: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: theme.spacing(1.5),
-        flexWrap: "wrap",
-        padding: theme.spacing(1.5, 2),
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        background: theme.palette.action.hover,
-    },
-    hitsText: { fontWeight: 600 },
-    truncatedText: { color: theme.palette.text.secondary },
     tableScroller: {
         flex: "1 1 auto",
         minHeight: 0,
@@ -126,14 +122,17 @@ const styles = (theme) => ({
     resultTable: {
         tableLayout: "fixed",
         minWidth: 920,
+        borderCollapse: "separate",
+        borderSpacing: 0,
         "& th": {
             position: "sticky",
             top: 0,
-            zIndex: 1,
-            background: theme.palette.action.hover,
+            zIndex: 3,
+            background: theme.palette.background.paper,
             color: theme.palette.text.primary,
             fontWeight: 600,
-            borderBottom: `1px solid ${theme.palette.divider}`,
+            borderBottom: `2px solid ${theme.palette.divider}`,
+            boxShadow: `0 2px 3px ${theme.palette.action.disabledBackground}`,
         },
         "& th, & td": {
             padding: theme.spacing(0.75, 1.25),
@@ -412,7 +411,6 @@ class LogSearchTab extends React.Component {
         return (
             <div className={classes.root}>
                 <Paper className={`${classes.panel} ${classes.searchPanel}`}>
-                    <Typography variant="subtitle1" className={classes.panelTitle}>Search</Typography>
                     <div className={classes.controlsGrid}>
                         <TextField
                             className={classes.searchField}
@@ -461,19 +459,36 @@ class LogSearchTab extends React.Component {
                                 color="primary"
                                 disabled={this.state.loading}
                                 onClick={() => this.onSearch()}
+                                size="small"
                             >
                                 Search
                             </Button>
-                            <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()}>
+                            <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()} size="small">
                                 Clear
                             </Button>
-                            {this.state.loading ? <CircularProgress size={24} /> : null}
+                            {this.state.loading ? <CircularProgress size={20} /> : null}
                         </div>
-                        {this.state.autoUpdateActive ? (
-                            <Typography component="span" variant="caption" className={classes.autoUpdateBadge}>
-                                Auto update active
-                            </Typography>
-                        ) : null}
+                        <div className={classes.statusBadges}>
+                            {this.state.autoUpdateActive ? (
+                                <Typography component="span" variant="caption" className={classes.statusBadge}>
+                                    Auto update active
+                                </Typography>
+                            ) : null}
+                            {this.state.hasSearched && !this.state.error ? (
+                                <Typography component="span" variant="caption" className={classes.statusBadge}>
+                                    Hits: {this.state.rows.length}
+                                </Typography>
+                            ) : null}
+                            {this.state.truncated ? (
+                                <Typography
+                                    component="span"
+                                    variant="caption"
+                                    className={`${classes.statusBadge} ${classes.truncatedBadge}`}
+                                >
+                                    Truncated
+                                </Typography>
+                            ) : null}
+                        </div>
                     </div>
 
                     {this.state.error ? <Typography className={classes.errorText}>Error: {this.state.error}</Typography> : null}
@@ -481,16 +496,6 @@ class LogSearchTab extends React.Component {
 
                 {this.state.hasSearched && !this.state.error ? (
                     <Paper className={`${classes.panel} ${classes.resultsPanel}`}>
-                        <div className={classes.resultsStatus}>
-                            <Typography className={classes.hitsText}>Hits: {this.state.rows.length}</Typography>
-                            {this.state.truncated ? (
-                                <Typography variant="caption" className={classes.truncatedText}>
-                                    Only the first {this.state.rows.length} results are shown. Increase max rows or narrow the
-                                    search.
-                                </Typography>
-                            ) : null}
-                        </div>
-
                         {this.state.rows.length ? (
                             <div className={classes.tableScroller}>
                                 <Table size="small" className={classes.resultTable}>
