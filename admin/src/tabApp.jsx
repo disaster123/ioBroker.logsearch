@@ -1,17 +1,11 @@
 import React from "react";
 import { withStyles } from "@material-ui/core/styles";
-
 import GenericApp from "@iobroker/adapter-react/GenericApp";
-import Settings from "./components/settings";
+import LogSearchTab from "./components/logSearchTab";
 
-/**
- * @type {(_theme: import("@material-ui/core/styles").Theme) => import("@material-ui/styles").StyleRules}
- */
-const styles = (_theme) => ({
-    root: {},
-});
+const styles = () => ({ root: {} });
 
-class App extends GenericApp {
+class TabApp extends GenericApp {
     constructor(props) {
         const extendedProps = {
             ...props,
@@ -33,28 +27,27 @@ class App extends GenericApp {
         super(props, extendedProps);
     }
 
-    onConnectionReady() {
-        // executed when connection is ready
+    getInstanceFromUrl() {
+        const query = new URLSearchParams(window.location.search);
+        return query.get("instance") || query.get("adapter") || "logsearch.0";
     }
 
     render() {
         if (!this.state.loaded) {
             return super.render();
         }
-
+        const instance = this.getInstanceFromUrl();
         return (
             <div className="App">
-                <Settings
-                    native={this.state.native}
-                    onChange={(attr, value) => this.updateNativeValue(attr, value)}
-                    sendTo={(command, message) => this.socket.sendTo(this.instance, command, message)}
+                <LogSearchTab
+                    defaultHours={this.state.native?.defaultHours}
+                    defaultMaxRows={this.state.native?.defaultMaxRows}
+                    includeGzip={this.state.native?.includeGzip}
+                    sendTo={(command, message) => this.socket.sendTo(instance, command, message)}
                 />
-                {this.renderError()}
-                {this.renderToast()}
-                {this.renderSaveCloseButtons()}
             </div>
         );
     }
 }
 
-export default withStyles(styles)(App);
+export default withStyles(styles)(TabApp);
