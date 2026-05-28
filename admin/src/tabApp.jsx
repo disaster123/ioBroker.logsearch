@@ -13,7 +13,9 @@ class TabApp extends React.Component {
             socketReady: false,
             defaultHours: 72,
             defaultMaxRows: 500,
+            defaultsLoaded: false,
         };
+        this.defaultsLoading = false;
 
         this.onConnectionChange = connected => {
             this.setState({ socketReady: connected });
@@ -55,6 +57,10 @@ class TabApp extends React.Component {
 
 
     async loadInstanceDefaults() {
+        if (this.defaultsLoading || this.state.defaultsLoaded) {
+            return;
+        }
+        this.defaultsLoading = true;
         const instance = this.getInstanceFromUrl();
         const objectId = `system.adapter.${instance}`;
 
@@ -66,9 +72,12 @@ class TabApp extends React.Component {
             this.setState({
                 defaultHours: Number.isFinite(defaultHours) && defaultHours > 0 ? defaultHours : 72,
                 defaultMaxRows: Number.isFinite(defaultMaxRows) && defaultMaxRows > 0 ? defaultMaxRows : 500,
+                defaultsLoaded: true,
             });
-        } catch (error) {
-            this.setState({ defaultHours: 72, defaultMaxRows: 500 });
+        } catch {
+            this.setState({ defaultHours: 72, defaultMaxRows: 500, defaultsLoaded: true });
+        } finally {
+            this.defaultsLoading = false;
         }
     }
     sendTo = (command, message) => {
@@ -83,11 +92,14 @@ class TabApp extends React.Component {
         return (
             <div className="App">
                 {!this.state.socketReady ? <div>Connecting to ioBroker...</div> : null}
-                <LogSearchTab
-                    defaultHours={this.state.defaultHours}
-                    defaultMaxRows={this.state.defaultMaxRows}
-                    sendTo={this.sendTo}
-                />
+                {this.state.socketReady && !this.state.defaultsLoaded ? <div>Loading defaults...</div> : null}
+                {this.state.defaultsLoaded ? (
+                    <LogSearchTab
+                        defaultHours={this.state.defaultHours}
+                        defaultMaxRows={this.state.defaultMaxRows}
+                        sendTo={this.sendTo}
+                    />
+                ) : null}
             </div>
         );
     }
