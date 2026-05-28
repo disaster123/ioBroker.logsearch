@@ -1,0 +1,58 @@
+name: Build Admin Assets
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'admin/build/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build-admin-assets:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build project
+        run: npm run build
+
+      - name: Check for admin build changes
+        id: admin_changes
+        run: |
+          if [ -n "$(git status --porcelain -- admin/build)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push admin build assets
+        if: steps.admin_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f admin/build
+          git commit -m "Build admin assets [skip ci]"
+          git push origin HEAD:main
