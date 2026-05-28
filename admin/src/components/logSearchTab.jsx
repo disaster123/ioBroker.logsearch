@@ -19,22 +19,157 @@ const DEBOUNCE_MS = 700;
 const AUTO_UPDATE_MS = 5000;
 
 const styles = (theme) => ({
-    root: { display: "flex", flexDirection: "column", gap: theme.spacing(2) },
+    root: {
+        display: "flex",
+        flexDirection: "column",
+        gap: theme.spacing(2),
+        height: "100vh",
+        minHeight: 0,
+        boxSizing: "border-box",
+        padding: theme.spacing(9, 2, 2),
+        overflow: "hidden",
+        background: theme.palette.background.default,
+        [theme.breakpoints.down("sm")]: {
+            height: "auto",
+            minHeight: "100vh",
+            overflow: "visible",
+            padding: theme.spacing(8, 1.5, 1.5),
+        },
+    },
+    panel: {
+        background: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 8,
+        boxShadow: theme.shadows[1],
+    },
+    searchPanel: {
+        padding: theme.spacing(2),
+        flex: "0 0 auto",
+        position: "sticky",
+        top: 0,
+        zIndex: 2,
+    },
+    panelTitle: {
+        fontWeight: 600,
+        marginBottom: theme.spacing(1.5),
+    },
     controlsGrid: {
         display: "grid",
-        gridTemplateColumns: "minmax(360px, 1fr) 110px 140px 130px",
-        gap: theme.spacing(2),
+        gridTemplateColumns: "minmax(320px, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(110px, 130px)",
+        gap: theme.spacing(1.5),
         alignItems: "center",
+        [theme.breakpoints.down("md")]: {
+            gridTemplateColumns: "minmax(260px, 1fr) repeat(3, minmax(96px, 1fr))",
+        },
+        [theme.breakpoints.down("sm")]: {
+            gridTemplateColumns: "1fr 1fr",
+        },
     },
-    actions: { display: "flex", gap: theme.spacing(1), alignItems: "center", flexWrap: "wrap" },
+    searchField: {
+        [theme.breakpoints.down("sm")]: {
+            gridColumn: "1 / -1",
+        },
+    },
+    actionsRow: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: theme.spacing(1.5),
+        flexWrap: "wrap",
+        marginTop: theme.spacing(1.5),
+    },
+    buttonGroup: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: theme.spacing(1),
+        flexWrap: "wrap",
+    },
+    autoUpdateBadge: {
+        display: "inline-flex",
+        alignItems: "center",
+        minHeight: 24,
+        padding: theme.spacing(0.25, 1),
+        borderRadius: 999,
+        color: theme.palette.text.secondary,
+        background: theme.palette.action.selected,
+        border: `1px solid ${theme.palette.divider}`,
+        fontSize: 12,
+        lineHeight: 1.5,
+    },
+    resultsPanel: {
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        flex: "1 1 auto",
+        overflow: "hidden",
+    },
+    resultsStatus: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: theme.spacing(1.5),
+        flexWrap: "wrap",
+        padding: theme.spacing(1.5, 2),
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        background: theme.palette.action.hover,
+    },
+    hitsText: { fontWeight: 600 },
+    truncatedText: { color: theme.palette.text.secondary },
+    tableScroller: {
+        flex: "1 1 auto",
+        minHeight: 0,
+        overflow: "auto",
+        [theme.breakpoints.down("sm")]: {
+            maxHeight: "65vh",
+        },
+    },
+    resultTable: {
+        tableLayout: "fixed",
+        minWidth: 920,
+        "& th": {
+            position: "sticky",
+            top: 0,
+            zIndex: 1,
+            background: theme.palette.action.hover,
+            color: theme.palette.text.primary,
+            fontWeight: 600,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+        },
+        "& th, & td": {
+            padding: theme.spacing(0.75, 1.25),
+            verticalAlign: "top",
+            lineHeight: 1.35,
+        },
+        "& tbody tr:nth-of-type(even)": {
+            background: theme.palette.action.selected,
+        },
+        "& tbody tr:hover": {
+            background: theme.palette.action.hover,
+        },
+    },
+    tableCellTime: {
+        whiteSpace: "nowrap",
+        width: 210,
+    },
+    tableCellLevel: {
+        width: 88,
+        whiteSpace: "nowrap",
+    },
+    tableCellSource: {
+        width: 180,
+        wordBreak: "break-word",
+    },
     tableCellMessage: { whiteSpace: "normal", wordBreak: "break-word" },
+    emptyState: {
+        padding: theme.spacing(3, 2),
+        color: theme.palette.text.secondary,
+    },
     levelError: { color: theme.palette.error.main, fontWeight: 600 },
-    levelWarn: { color: "#c77700", fontWeight: 600 },
+    levelWarn: { color: theme.palette.warning.dark, fontWeight: 600 },
     levelInfo: { opacity: 0.9 },
     levelDebug: { opacity: 0.7 },
     levelSilly: { opacity: 0.6 },
-    resultBox: { padding: theme.spacing(2) },
-    errorText: { color: theme.palette.error.main },
+    errorText: { color: theme.palette.error.main, marginTop: theme.spacing(1.5) },
 });
 
 class LogSearchTab extends React.Component {
@@ -276,98 +411,120 @@ class LogSearchTab extends React.Component {
 
         return (
             <div className={classes.root}>
-                <div className={classes.controlsGrid}>
-                    <TextField
-                        label="Search text"
-                        value={this.state.searchText}
-                        onChange={(e) => this.onFieldChange("searchText", e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <TextField
-                        label="Hours"
-                        type="number"
-                        value={this.state.hours}
-                        onChange={(e) => this.onFieldChange("hours", e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                    <FormControl fullWidth size="small">
-                        <InputLabel>Level</InputLabel>
-                        <Select
-                            value={this.state.level}
-                            label="Level"
-                            onChange={(e) => this.onFieldChange("level", e.target.value)}
-                        >
-                            {["all", "error", "warn", "info", "debug", "silly"].map((level) => (
-                                <MenuItem key={level} value={level}>
-                                    {level}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <TextField
-                        label="Max rows"
-                        type="number"
-                        value={this.state.maxRows}
-                        onChange={(e) => this.onFieldChange("maxRows", e.target.value)}
-                        size="small"
-                        fullWidth
-                    />
-                </div>
+                <Paper className={`${classes.panel} ${classes.searchPanel}`}>
+                    <Typography variant="subtitle1" className={classes.panelTitle}>Search</Typography>
+                    <div className={classes.controlsGrid}>
+                        <TextField
+                            className={classes.searchField}
+                            label="Search text"
+                            value={this.state.searchText}
+                            onChange={(e) => this.onFieldChange("searchText", e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <TextField
+                            label="Hours"
+                            type="number"
+                            value={this.state.hours}
+                            onChange={(e) => this.onFieldChange("hours", e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Level</InputLabel>
+                            <Select
+                                value={this.state.level}
+                                label="Level"
+                                onChange={(e) => this.onFieldChange("level", e.target.value)}
+                            >
+                                {["all", "error", "warn", "info", "debug", "silly"].map((level) => (
+                                    <MenuItem key={level} value={level}>
+                                        {level}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            label="Max rows"
+                            type="number"
+                            value={this.state.maxRows}
+                            onChange={(e) => this.onFieldChange("maxRows", e.target.value)}
+                            size="small"
+                            fullWidth
+                        />
+                    </div>
 
-                <div className={classes.actions}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        disabled={this.state.loading}
-                        onClick={() => this.onSearch()}
-                    >
-                        Search
-                    </Button>
-                    <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()}>
-                        Clear
-                    </Button>
-                    {this.state.loading ? <CircularProgress size={24} /> : null}
-                    {this.state.autoUpdateActive ? <Typography variant="caption">Auto update active</Typography> : null}
-                </div>
-
-                {this.state.error ? <Typography className={classes.errorText}>Error: {this.state.error}</Typography> : null}
-
-                {this.state.hasSearched && !this.state.error ? (
-                    <Paper className={classes.resultBox}>
-                        <Typography>Hits: {this.state.rows.length}</Typography>
-                        {this.state.truncated ? (
-                            <Typography>
-                                Only the first {this.state.rows.length} results are shown. Increase max rows or narrow the
-                                search.
+                    <div className={classes.actionsRow}>
+                        <div className={classes.buttonGroup}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                disabled={this.state.loading}
+                                onClick={() => this.onSearch()}
+                            >
+                                Search
+                            </Button>
+                            <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()}>
+                                Clear
+                            </Button>
+                            {this.state.loading ? <CircularProgress size={24} /> : null}
+                        </div>
+                        {this.state.autoUpdateActive ? (
+                            <Typography component="span" variant="caption" className={classes.autoUpdateBadge}>
+                                Auto update active
                             </Typography>
                         ) : null}
-                    </Paper>
-                ) : null}
+                    </div>
 
-                {this.state.rows.length ? (
-                    <Paper>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Time</TableCell>
-                                    <TableCell>Level</TableCell>
-                                    <TableCell>Source</TableCell>
-                                    <TableCell>Message</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {this.state.rows.map((row) => (
-                                    <TableRow key={this.getRowKey(row)}>
-                                        <TableCell>{row.ts || ""}</TableCell>
-                                        <TableCell className={this.getLevelClass(row.level)}>{row.level}</TableCell>
-                                        <TableCell>{row.source}</TableCell>
-                                        <TableCell className={classes.tableCellMessage}>{row.message}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                    {this.state.error ? <Typography className={classes.errorText}>Error: {this.state.error}</Typography> : null}
+                </Paper>
+
+                {this.state.hasSearched && !this.state.error ? (
+                    <Paper className={`${classes.panel} ${classes.resultsPanel}`}>
+                        <div className={classes.resultsStatus}>
+                            <Typography className={classes.hitsText}>Hits: {this.state.rows.length}</Typography>
+                            {this.state.truncated ? (
+                                <Typography variant="caption" className={classes.truncatedText}>
+                                    Only the first {this.state.rows.length} results are shown. Increase max rows or narrow the
+                                    search.
+                                </Typography>
+                            ) : null}
+                        </div>
+
+                        {this.state.rows.length ? (
+                            <div className={classes.tableScroller}>
+                                <Table size="small" className={classes.resultTable}>
+                                    <colgroup>
+                                        <col style={{ width: 210 }} />
+                                        <col style={{ width: 88 }} />
+                                        <col style={{ width: 180 }} />
+                                        <col />
+                                    </colgroup>
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell className={classes.tableCellTime}>Time</TableCell>
+                                            <TableCell className={classes.tableCellLevel}>Level</TableCell>
+                                            <TableCell className={classes.tableCellSource}>Source</TableCell>
+                                            <TableCell>Message</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {this.state.rows.map((row) => (
+                                            <TableRow key={this.getRowKey(row)}>
+                                                <TableCell className={classes.tableCellTime}>{row.ts || ""}</TableCell>
+                                                <TableCell className={`${classes.tableCellLevel} ${this.getLevelClass(row.level)}`}>
+                                                    {row.level}
+                                                </TableCell>
+                                                <TableCell className={classes.tableCellSource}>{row.source}</TableCell>
+                                                <TableCell className={classes.tableCellMessage}>{row.message}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                            <Typography className={classes.emptyState}>No results found.</Typography>
+                        )}
                     </Paper>
                 ) : null}
             </div>
