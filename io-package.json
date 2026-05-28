@@ -71,7 +71,7 @@
         "messagebox": true,
         "adminUI": {
             "config": "materialize",
-            "tab": "html/tab_m.html"
+            "tab": "html"
         },
         "eraseOnUpload": true,
         "dependencies": [
@@ -83,7 +83,15 @@
             {
                 "admin": ">=7.0.23"
             }
-        ]
+        ],
+        "adminTab": {
+            "singleton": true,
+            "name": {
+                "en": "Log Search",
+                "de": "Logsuche"
+            },
+            "link": "/adapter/logsearch/tab_m.html?newReact=true&instance=0"
+        }
     },
     "native": {
         "logDirectory": "/opt/iobroker/log",
