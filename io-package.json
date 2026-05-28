@@ -70,7 +70,8 @@
         "dataSource": "poll",
         "messagebox": true,
         "adminUI": {
-            "config": "materialize"
+            "config": "materialize",
+            "tab": "html/tab_m.html"
         },
         "eraseOnUpload": true,
         "dependencies": [
