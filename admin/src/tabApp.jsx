@@ -1,6 +1,6 @@
 import React from "react";
-import { withStyles } from "@material-ui/core/styles";
-import Connection from "@iobroker/adapter-react/Connection";
+import { withStyles } from "@mui/styles";
+import { AdminConnection } from "@iobroker/adapter-react-v5";
 import LogSearchTab from "./components/logSearchTab";
 
 const styles = () => ({ root: {} });
@@ -8,7 +8,7 @@ const styles = () => ({ root: {} });
 class TabApp extends React.Component {
     constructor(props) {
         super(props);
-        this.socket = new Connection(props);
+        this.socket = new AdminConnection(props);
         this.state = {
             socketReady: false,
         };
