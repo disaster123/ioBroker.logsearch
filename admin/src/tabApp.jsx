@@ -29,7 +29,23 @@ class TabApp extends GenericApp {
 
     getInstanceFromUrl() {
         const query = new URLSearchParams(window.location.search);
-        return query.get("instance") || query.get("adapter") || "logsearch.0";
+        const instance = query.get("instance");
+        const adapter = query.get("adapter");
+
+        const normalize = value => {
+            if (!value) {
+                return null;
+            }
+            if (/^logsearch\.\d+$/.test(value)) {
+                return value;
+            }
+            if (/^\d+$/.test(value)) {
+                return `logsearch.${value}`;
+            }
+            return null;
+        };
+
+        return normalize(instance) || normalize(adapter) || "logsearch.0";
     }
 
     render() {
