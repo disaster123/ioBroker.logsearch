@@ -1,5 +1,6 @@
 import React from "react";
 import { withStyles } from "@mui/styles";
+import { alpha } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
@@ -145,6 +146,18 @@ const styles = (theme) => ({
         "& tbody tr:hover": {
             background: theme.palette.action.hover,
         },
+        "& tbody tr.rowWarn": {
+            background: alpha(theme.palette.warning.main, 0.12),
+        },
+        "& tbody tr.rowWarn:hover": {
+            background: alpha(theme.palette.warning.main, 0.18),
+        },
+        "& tbody tr.rowError": {
+            background: alpha(theme.palette.error.main, 0.12),
+        },
+        "& tbody tr.rowError:hover": {
+            background: alpha(theme.palette.error.main, 0.18),
+        },
     },
     tableCellTime: {
         whiteSpace: "nowrap",
@@ -194,6 +207,10 @@ class LogSearchTab extends React.Component {
         this.autoUpdateTimer = null;
         this.autoUpdateInFlight = false;
         this.unmounted = false;
+    }
+
+    componentDidMount() {
+        this.onSearch();
     }
 
     componentWillUnmount() {
@@ -304,6 +321,12 @@ class LogSearchTab extends React.Component {
         return classes.levelInfo;
     }
 
+    getRowClass(level) {
+        if (level === "error") return "rowError";
+        if (level === "warn") return "rowWarn";
+        return "";
+    }
+
     queueDebouncedSearch() {
         this.clearSearchDebounce();
         this.searchDebounceTimer = setTimeout(() => {
@@ -388,13 +411,10 @@ class LogSearchTab extends React.Component {
         this.setState({
             searchText: "",
             error: "",
-            rows: [],
-            truncated: false,
-            hasSearched: false,
             loading: false,
             cursor: null,
             autoUpdateActive: false,
-        });
+        }, () => this.onSearch());
     }
 
     onFieldChange = (field, value) => {
@@ -464,7 +484,7 @@ class LogSearchTab extends React.Component {
                                 Search
                             </Button>
                             <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()} size="small">
-                                Clear
+                                Clear filter
                             </Button>
                             {this.state.loading ? <CircularProgress size={20} /> : null}
                         </div>
@@ -515,7 +535,7 @@ class LogSearchTab extends React.Component {
                                     </TableHead>
                                     <TableBody>
                                         {this.state.rows.map((row) => (
-                                            <TableRow key={this.getRowKey(row)}>
+                                            <TableRow key={this.getRowKey(row)} className={this.getRowClass(row.level)}>
                                                 <TableCell className={classes.tableCellTime}>{row.ts || ""}</TableCell>
                                                 <TableCell className={`${classes.tableCellLevel} ${this.getLevelClass(row.level)}`}>
                                                     {row.level}
