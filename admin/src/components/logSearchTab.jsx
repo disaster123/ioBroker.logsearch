@@ -232,7 +232,6 @@ class LogSearchTab extends React.Component {
             clearInterval(this.autoUpdateTimer);
             this.autoUpdateTimer = null;
         }
-        this.autoUpdateInFlight = false;
         if (!this.unmounted && this.state.autoUpdateActive) {
             this.setState({ autoUpdateActive: false });
         }
@@ -247,25 +246,33 @@ class LogSearchTab extends React.Component {
         this.setState({ autoUpdateActive: true });
     }
 
-    getRowKey(row) {
-        return row?.rawPlain || row?.raw || `${row?.ts || ""}|${row?.level || ""}|${row?.source || ""}|${row?.message || ""}`;
+    getRowIdentity(row) {
+        return row?.rowId || row?.rawPlain || row?.raw || `${row?.ts || ""}|${row?.level || ""}|${row?.source || ""}|${row?.message || ""}`;
+    }
+
+    getRenderKey(row, index) {
+        return row?.rowId || `${this.getRowIdentity(row)}|${index}`;
+    }
+
+    getRowTimestamp(row) {
+        const timestamp = new Date(String(row?.ts || "").replace(" ", "T")).getTime();
+        return Number.isFinite(timestamp) ? timestamp : -Infinity;
     }
 
     mergeAutoUpdateRows(existingRows, newRows, maxRows) {
         const seen = new Set();
         const merged = [];
         for (const row of [...newRows, ...existingRows]) {
-            const key = this.getRowKey(row);
+            const key = this.getRowIdentity(row);
             if (seen.has(key)) {
                 continue;
             }
             seen.add(key);
             merged.push(row);
-            if (merged.length >= maxRows) {
-                break;
-            }
         }
-        return merged;
+        return merged
+            .sort((a, b) => this.getRowTimestamp(b) - this.getRowTimestamp(a))
+            .slice(0, maxRows);
     }
 
     runAutoUpdate = async () => {
@@ -419,9 +426,7 @@ class LogSearchTab extends React.Component {
 
     onFieldChange = (field, value) => {
         this.stopAutoUpdate();
-        if (this.searchInFlight) {
-            this.searchGeneration += 1;
-        }
+        this.searchGeneration += 1;
         this.setState({ [field]: value }, () => this.queueDebouncedSearch());
     };
 
@@ -534,8 +539,8 @@ class LogSearchTab extends React.Component {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {this.state.rows.map((row) => (
-                                            <TableRow key={this.getRowKey(row)} className={this.getRowClass(row.level)}>
+                                        {this.state.rows.map((row, index) => (
+                                            <TableRow key={this.getRenderKey(row, index)} className={this.getRowClass(row.level)}>
                                                 <TableCell className={classes.tableCellTime}>{row.ts || ""}</TableCell>
                                                 <TableCell className={`${classes.tableCellLevel} ${this.getLevelClass(row.level)}`}>
                                                     {row.level}
