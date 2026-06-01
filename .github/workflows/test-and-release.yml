@@ -12,6 +12,7 @@ on:
       # pre-releases
       - "v[0-9]+.[0-9]+.[0-9]+-**"
   pull_request: {}
+  workflow_dispatch:
 
 # Cancel previous PR/branch runs when a new commit is pushed
 concurrency:
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   # Performs quick checks before the expensive test runs
   check-and-lint:
-    if: contains(github.event.head_commit.message, '[skip ci]') == false
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[skip ci]') == false
 
     runs-on: ubuntu-latest
 
@@ -35,7 +36,7 @@ jobs:
 
   # Runs adapter tests on all supported node versions and OSes
   adapter-tests:
-    if: contains(github.event.head_commit.message, '[skip ci]') == false
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[skip ci]') == false
 
     runs-on: ${{ matrix.os }}
     strategy:

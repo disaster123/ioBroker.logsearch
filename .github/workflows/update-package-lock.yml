@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   update-package-lock:
@@ -40,6 +41,12 @@ jobs:
           git add package-lock.json
           git commit -m "Update package lock"
           git push origin HEAD:main
+
+      - name: Trigger tests for updated package lock
+        if: steps.lock_changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run test-and-release.yml --ref main
 
       - name: No changes
         if: steps.lock_changes.outputs.changed != 'true'
