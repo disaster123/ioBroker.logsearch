@@ -205,6 +205,7 @@ class LogSearchTab extends React.Component {
         this.searchDebounceTimer = null;
         this.pendingSearch = false;
         this.searchInFlight = false;
+        this.searchRequestToken = 0;
         this.searchGeneration = 0;
         this.autoUpdateTimer = null;
         this.autoUpdateInFlight = false;
@@ -231,6 +232,7 @@ class LogSearchTab extends React.Component {
         if (prevProps.socketReady === true && this.props.socketReady === false) {
             this.resumeResyncPending = true;
             this.stopAutoUpdate(true);
+            this.invalidateSearchRequest();
             return;
         }
 
@@ -258,8 +260,7 @@ class LogSearchTab extends React.Component {
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
         this.resumeResyncPending = false;
-        this.pendingSearch = false;
-        this.searchGeneration += 1;
+        this.invalidateSearchRequest();
     }
 
     clearSearchDebounce() {
@@ -271,6 +272,16 @@ class LogSearchTab extends React.Component {
     invalidateAutoUpdateRequest() {
         this.autoUpdateRequestToken += 1;
         this.autoUpdateInFlight = false;
+    }
+
+    invalidateSearchRequest() {
+        this.searchRequestToken += 1;
+        this.searchGeneration += 1;
+        this.searchInFlight = false;
+        this.pendingSearch = false;
+        if (!this.unmounted && this.state.loading) {
+            this.setState({ loading: false });
+        }
     }
 
     stopAutoUpdate(invalidateInFlight = false) {
@@ -352,9 +363,7 @@ class LogSearchTab extends React.Component {
             return;
         }
         if (this.searchInFlight) {
-            this.resumeResyncPending = true;
-            this.pendingSearch = true;
-            return;
+            this.invalidateSearchRequest();
         }
         this.resumeResyncPending = true;
         this.clearSearchDebounce();
@@ -478,6 +487,7 @@ class LogSearchTab extends React.Component {
         this.pendingSearch = false;
         this.stopAutoUpdate(true);
         this.searchInFlight = true;
+        const requestToken = ++this.searchRequestToken;
         const currentGeneration = ++this.searchGeneration;
         const payload = {
             searchText: this.state.searchText,
@@ -492,7 +502,7 @@ class LogSearchTab extends React.Component {
             if (response?.ok === false) {
                 throw new Error(response.error || "Search failed");
             }
-            if (!this.unmounted && currentGeneration === this.searchGeneration) {
+            if (!this.unmounted && requestToken === this.searchRequestToken && currentGeneration === this.searchGeneration) {
                 if (!this.pendingSearch) {
                     this.resumeResyncPending = false;
                 }
@@ -504,7 +514,7 @@ class LogSearchTab extends React.Component {
                 }, () => this.startAutoUpdate());
             }
         } catch (error) {
-            if (!this.unmounted && currentGeneration === this.searchGeneration) {
+            if (!this.unmounted && requestToken === this.searchRequestToken && currentGeneration === this.searchGeneration) {
                 this.setState({
                     loading: false,
                     rows: [],
@@ -515,13 +525,15 @@ class LogSearchTab extends React.Component {
                 });
             }
         } finally {
-            this.searchInFlight = false;
-            if (!this.unmounted) {
-                if (currentGeneration !== this.searchGeneration && this.state.loading) {
-                    this.setState({ loading: false });
-                }
-                if (this.pendingSearch) {
-                    this.runSearch();
+            if (requestToken === this.searchRequestToken) {
+                this.searchInFlight = false;
+                if (!this.unmounted) {
+                    if (currentGeneration !== this.searchGeneration && this.state.loading) {
+                        this.setState({ loading: false });
+                    }
+                    if (this.pendingSearch) {
+                        this.runSearch();
+                    }
                 }
             }
         }
@@ -537,8 +549,12 @@ class LogSearchTab extends React.Component {
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
         this.resumeResyncPending = false;
-        this.pendingSearch = false;
-        this.searchGeneration += 1;
+        if (this.searchInFlight) {
+            this.invalidateSearchRequest();
+        } else {
+            this.pendingSearch = false;
+            this.searchGeneration += 1;
+        }
         this.setState({
             searchText: "",
             error: "",
@@ -551,7 +567,11 @@ class LogSearchTab extends React.Component {
     onFieldChange = (field, value) => {
         this.stopAutoUpdate(true);
         this.resumeResyncPending = false;
-        this.searchGeneration += 1;
+        if (this.searchInFlight) {
+            this.invalidateSearchRequest();
+        } else {
+            this.searchGeneration += 1;
+        }
         this.setState({ [field]: value }, () => this.queueDebouncedSearch());
     };
 
