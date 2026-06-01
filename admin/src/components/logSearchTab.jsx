@@ -18,6 +18,8 @@ import TableRow from "@mui/material/TableRow";
 
 const DEBOUNCE_MS = 700;
 const AUTO_UPDATE_MS = 5000;
+const AUTO_UPDATE_RESUME_GAP_MS = 20000;
+const RESUME_RESYNC_THROTTLE_MS = 1000;
 
 const styles = (theme) => ({
     root: {
@@ -206,17 +208,56 @@ class LogSearchTab extends React.Component {
         this.searchGeneration = 0;
         this.autoUpdateTimer = null;
         this.autoUpdateInFlight = false;
+        this.autoUpdateRequestToken = 0;
+        this.lastAutoUpdateTickAt = null;
+        this.lastResumeResyncAt = 0;
+        this.resumeResyncPending = false;
         this.unmounted = false;
     }
 
     componentDidMount() {
+        if (typeof document !== "undefined") {
+            document.addEventListener("visibilitychange", this.handleResumeEvent);
+        }
+        if (typeof window !== "undefined") {
+            window.addEventListener("focus", this.handleResumeEvent);
+            window.addEventListener("pageshow", this.handleResumeEvent);
+            window.addEventListener("online", this.handleResumeEvent);
+        }
         this.onSearch();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.socketReady === true && this.props.socketReady === false) {
+            this.resumeResyncPending = true;
+            this.stopAutoUpdate(true);
+            return;
+        }
+
+        if (
+            prevProps.socketReady === false
+            && this.props.socketReady === true
+            && this.state.hasSearched
+            && (this.resumeResyncPending || this.isAutoUpdateStale())
+        ) {
+            this.resumeResyncPending = false;
+            this.resyncAfterResume();
+        }
     }
 
     componentWillUnmount() {
         this.unmounted = true;
+        if (typeof document !== "undefined") {
+            document.removeEventListener("visibilitychange", this.handleResumeEvent);
+        }
+        if (typeof window !== "undefined") {
+            window.removeEventListener("focus", this.handleResumeEvent);
+            window.removeEventListener("pageshow", this.handleResumeEvent);
+            window.removeEventListener("online", this.handleResumeEvent);
+        }
         this.clearSearchDebounce();
-        this.stopAutoUpdate();
+        this.stopAutoUpdate(true);
+        this.resumeResyncPending = false;
         this.pendingSearch = false;
         this.searchGeneration += 1;
     }
@@ -227,10 +268,19 @@ class LogSearchTab extends React.Component {
             this.searchDebounceTimer = null;
         }
     }
-    stopAutoUpdate() {
+    invalidateAutoUpdateRequest() {
+        this.autoUpdateRequestToken += 1;
+        this.autoUpdateInFlight = false;
+    }
+
+    stopAutoUpdate(invalidateInFlight = false) {
         if (this.autoUpdateTimer) {
             clearInterval(this.autoUpdateTimer);
             this.autoUpdateTimer = null;
+        }
+        this.lastAutoUpdateTickAt = null;
+        if (invalidateInFlight) {
+            this.invalidateAutoUpdateRequest();
         }
         if (!this.unmounted && this.state.autoUpdateActive) {
             this.setState({ autoUpdateActive: false });
@@ -242,8 +292,75 @@ class LogSearchTab extends React.Component {
         if (this.unmounted || !this.state.cursor) {
             return;
         }
-        this.autoUpdateTimer = setInterval(() => this.runAutoUpdate(), AUTO_UPDATE_MS);
+        this.lastAutoUpdateTickAt = Date.now();
+        this.autoUpdateTimer = setInterval(() => this.handleAutoUpdateTick(), AUTO_UPDATE_MS);
         this.setState({ autoUpdateActive: true });
+    }
+
+    handleAutoUpdateTick = () => {
+        const now = Date.now();
+        const lastTickAt = this.lastAutoUpdateTickAt;
+        this.lastAutoUpdateTickAt = now;
+        if (lastTickAt && now - lastTickAt > AUTO_UPDATE_RESUME_GAP_MS) {
+            this.resyncAfterResume();
+            return;
+        }
+        this.runAutoUpdate();
+    };
+
+    isSocketReady() {
+        return this.props.socketReady !== false;
+    }
+
+    isAutoUpdateStale(now = Date.now()) {
+        return !!this.lastAutoUpdateTickAt && now - this.lastAutoUpdateTickAt > AUTO_UPDATE_RESUME_GAP_MS;
+    }
+
+    handleResumeEvent = (event) => {
+        if (this.unmounted || !this.state.hasSearched) {
+            return;
+        }
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+            return;
+        }
+        if (!this.isSocketReady()) {
+            this.resumeResyncPending = true;
+            return;
+        }
+
+        const now = Date.now();
+        const autoUpdateStale = this.isAutoUpdateStale(now);
+        if (event?.type === "online" && autoUpdateStale) {
+            this.resumeResyncPending = true;
+        }
+        if (!autoUpdateStale) {
+            return;
+        }
+        if (now - this.lastResumeResyncAt < RESUME_RESYNC_THROTTLE_MS) {
+            return;
+        }
+        this.lastResumeResyncAt = now;
+        this.resyncAfterResume();
+    };
+
+    resyncAfterResume() {
+        if (this.unmounted || !this.state.hasSearched) {
+            return;
+        }
+        if (!this.isSocketReady()) {
+            this.resumeResyncPending = true;
+            return;
+        }
+        if (this.searchInFlight) {
+            this.resumeResyncPending = true;
+            this.pendingSearch = true;
+            return;
+        }
+        this.resumeResyncPending = true;
+        this.clearSearchDebounce();
+        this.stopAutoUpdate(true);
+        this.pendingSearch = true;
+        this.runSearch();
     }
 
     getRowIdentity(row) {
@@ -280,6 +397,7 @@ class LogSearchTab extends React.Component {
             return;
         }
 
+        const requestToken = ++this.autoUpdateRequestToken;
         this.autoUpdateInFlight = true;
         const currentGeneration = this.searchGeneration;
         const maxRows = this.getNumberOrDefault(this.state.maxRows, 500);
@@ -297,7 +415,7 @@ class LogSearchTab extends React.Component {
             if (response?.ok === false) {
                 throw new Error(response.error || "Auto update failed");
             }
-            if (!this.unmounted && currentGeneration === this.searchGeneration) {
+            if (!this.unmounted && requestToken === this.autoUpdateRequestToken && currentGeneration === this.searchGeneration) {
                 const responseRows = Array.isArray(response?.rows) ? response.rows : [];
                 this.setState((state) => ({
                     rows: this.mergeAutoUpdateRows(state.rows, responseRows, maxRows),
@@ -309,7 +427,9 @@ class LogSearchTab extends React.Component {
         } catch {
             // Auto update is best-effort; keep the existing search result visible.
         } finally {
-            this.autoUpdateInFlight = false;
+            if (requestToken === this.autoUpdateRequestToken) {
+                this.autoUpdateInFlight = false;
+            }
         }
     };
 
@@ -356,7 +476,7 @@ class LogSearchTab extends React.Component {
         }
 
         this.pendingSearch = false;
-        this.stopAutoUpdate();
+        this.stopAutoUpdate(true);
         this.searchInFlight = true;
         const currentGeneration = ++this.searchGeneration;
         const payload = {
@@ -373,6 +493,9 @@ class LogSearchTab extends React.Component {
                 throw new Error(response.error || "Search failed");
             }
             if (!this.unmounted && currentGeneration === this.searchGeneration) {
+                if (!this.pendingSearch) {
+                    this.resumeResyncPending = false;
+                }
                 this.setState({
                     rows: Array.isArray(response?.rows) ? response.rows : [],
                     truncated: !!response?.truncated,
@@ -412,7 +535,8 @@ class LogSearchTab extends React.Component {
 
     onClear() {
         this.clearSearchDebounce();
-        this.stopAutoUpdate();
+        this.stopAutoUpdate(true);
+        this.resumeResyncPending = false;
         this.pendingSearch = false;
         this.searchGeneration += 1;
         this.setState({
@@ -425,7 +549,8 @@ class LogSearchTab extends React.Component {
     }
 
     onFieldChange = (field, value) => {
-        this.stopAutoUpdate();
+        this.stopAutoUpdate(true);
+        this.resumeResyncPending = false;
         this.searchGeneration += 1;
         this.setState({ [field]: value }, () => this.queueDebouncedSearch());
     };

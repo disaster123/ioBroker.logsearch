@@ -97,6 +97,7 @@ class TabApp extends React.Component {
                     <LogSearchTab
                         defaultHours={this.state.defaultHours}
                         defaultMaxRows={this.state.defaultMaxRows}
+                        socketReady={this.state.socketReady}
                         sendTo={this.sendTo}
                     />
                 ) : null}
