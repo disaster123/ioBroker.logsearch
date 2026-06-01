@@ -10,6 +10,10 @@ updates:
     assignees:
       - Disaster123
     versioning-strategy: increase
+    ignore:
+      - dependency-name: "sinon-chai"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: github-actions
     directory: "/"
