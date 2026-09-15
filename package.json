@@ -63,6 +63,8 @@
   "scripts": {
     "prebuild": "rimraf admin/build",
     "build": "build-adapter react",
+    "build:check": "npm run build && node scripts/check-admin-assets.js",
+    "check:release": "node scripts/check-release.js",
     "watch": "build-adapter react --watch",
     "prebuild:react": "rimraf admin/build",
     "build:react": "build-adapter react",

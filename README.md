@@ -61,6 +61,14 @@ npm run build
 
 CI runs linting and JavaScript type checking on Node.js 24, then executes adapter tests on Node.js 22, 24, and 26 across Linux, Windows, and macOS.
 
+### Preparing a release
+
+Use Node.js 24 and `npm ci` for release builds. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Run `npm run build` and commit the version changes and all files added, changed, or removed in `admin/build` together. The release script already runs this build in its `before_commit` hook.
+
+Push the complete commit and wait for its **Test and Release** workflow to pass. CI runs `npm run build:check`, which rebuilds the Admin interface and rejects any difference from the committed assets, including new files. No background workflow updates the assets after these checks. Dependency updates that affect the build must include regenerated assets as well; the package-lock maintenance workflow does this in the same commit.
+
+Create an annotated `v<version>` tag on that exact verified commit and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job repeats the version and asset checks immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
+
 ## Changelog
 
 <!--
@@ -69,6 +77,8 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 -->
 
 ### **WORK IN PROGRESS**
+
+- (@disaster123) Verify committed Admin assets and release versions before publishing; remove background asset commits.
 
 ### 0.0.2 (2026-09-15)
 
