@@ -1,13 +1,13 @@
-import React from "react";
-import { withStyles } from "@mui/styles";
+import React from 'react';
+import { withStyles } from '@mui/styles';
 
-import { AdminConnection, GenericApp } from "@iobroker/adapter-react-v5";
-import Settings from "./components/settings";
+import { AdminConnection, GenericApp } from '@iobroker/adapter-react-v5';
+import Settings from './components/settings';
 
 /**
- * @type {(_theme: import("@mui/material/styles").Theme) => import("@mui/styles").StyleRules}
+ * @param _theme
  */
-const styles = (_theme) => ({
+const styles = _theme => ({
     root: {},
 });
 
@@ -18,16 +18,16 @@ class App extends GenericApp {
             Connection: AdminConnection,
             encryptedFields: [],
             translations: {
-                "en": require("./i18n/en.json"),
-                "de": require("./i18n/de.json"),
-                "ru": require("./i18n/ru.json"),
-                "pt": require("./i18n/pt.json"),
-                "nl": require("./i18n/nl.json"),
-                "fr": require("./i18n/fr.json"),
-                "it": require("./i18n/it.json"),
-                "es": require("./i18n/es.json"),
-                "pl": require("./i18n/pl.json"),
-                "zh-cn": require("./i18n/zh-cn.json"),
+                en: require('./i18n/en.json'),
+                de: require('./i18n/de.json'),
+                ru: require('./i18n/ru.json'),
+                pt: require('./i18n/pt.json'),
+                nl: require('./i18n/nl.json'),
+                fr: require('./i18n/fr.json'),
+                it: require('./i18n/it.json'),
+                es: require('./i18n/es.json'),
+                pl: require('./i18n/pl.json'),
+                'zh-cn': require('./i18n/zh-cn.json'),
             },
         };
         super(extendedProps);

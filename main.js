@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 /*
  * Created with @iobroker/create-adapter v2.6.5
@@ -6,38 +6,38 @@
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
-const utils = require("@iobroker/adapter-core");
-const { searchLogs } = require("./lib/log-search");
+const utils = require('@iobroker/adapter-core');
+const { searchLogs } = require('./lib/log-search');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
 
 class Logsearch extends utils.Adapter {
-
     /**
-     * @param {Partial<utils.AdapterOptions>} [options={}]
+     * @param {Partial<utils.AdapterOptions>} [options]
      */
     constructor(options) {
         super({
             ...options,
-            name: "logsearch",
+            name: 'logsearch',
         });
-        this.on("ready", this.onReady.bind(this));
-        this.on("stateChange", this.onStateChange.bind(this));
+        this.on('ready', this.onReady.bind(this));
+        this.on('stateChange', this.onStateChange.bind(this));
         // this.on("objectChange", this.onObjectChange.bind(this));
-        this.on("message", this.onMessage.bind(this));
-        this.on("unload", this.onUnload.bind(this));
+        this.on('message', this.onMessage.bind(this));
+        this.on('unload', this.onUnload.bind(this));
     }
 
     /**
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
-        this.log.debug("Adapter started");
+        this.log.debug('Adapter started');
     }
 
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
+     *
      * @param {() => void} callback
      */
     onUnload(callback) {
@@ -49,7 +49,7 @@ class Logsearch extends utils.Adapter {
             // clearInterval(interval1);
 
             callback();
-        } catch (e) {
+        } catch {
             callback();
         }
     }
@@ -73,6 +73,7 @@ class Logsearch extends utils.Adapter {
 
     /**
      * Is called if a subscribed state changes
+     *
      * @param {string} id
      * @param {ioBroker.State | null | undefined} state
      */
@@ -88,28 +89,32 @@ class Logsearch extends utils.Adapter {
 
     /**
      * Some message was sent to this instance over message box.
+     *
      * @param {ioBroker.Message} obj
      */
     async onMessage(obj) {
-        if (!obj || obj.command !== "searchLogs") {
+        if (!obj || obj.command !== 'searchLogs') {
             return;
         }
 
-        const message = typeof obj.message === "object" && obj.message !== null ? obj.message : {};
+        const message = typeof obj.message === 'object' && obj.message !== null ? obj.message : {};
 
-        const cursor = typeof message.cursor === "object" && message.cursor !== null ? {
-            file: typeof message.cursor.file === "string" ? message.cursor.file : "",
-            byteOffset: Number(message.cursor.byteOffset),
-            lineNumber: Number(message.cursor.lineNumber),
-            size: Number(message.cursor.size),
-            mtimeMs: Number(message.cursor.mtimeMs),
-        } : undefined;
+        const cursor =
+            typeof message.cursor === 'object' && message.cursor !== null
+                ? {
+                      file: typeof message.cursor.file === 'string' ? message.cursor.file : '',
+                      byteOffset: Number(message.cursor.byteOffset),
+                      lineNumber: Number(message.cursor.lineNumber),
+                      size: Number(message.cursor.size),
+                      mtimeMs: Number(message.cursor.mtimeMs),
+                  }
+                : undefined;
 
         const options = {
-            logDirectory: typeof this.config.logDirectory === "string" ? this.config.logDirectory : "/opt/iobroker/log",
-            searchText: String(message.searchText ?? ""),
+            logDirectory: typeof this.config.logDirectory === 'string' ? this.config.logDirectory : '/opt/iobroker/log',
+            searchText: String(message.searchText ?? ''),
             hours: Number(message.hours ?? this.config.defaultHours ?? 72),
-            level: typeof message.level === "string" ? message.level : "all",
+            level: typeof message.level === 'string' ? message.level : 'all',
             maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
             includeGzip: true,
             activeOnly: message.activeOnly === true,
@@ -130,15 +135,14 @@ class Logsearch extends utils.Adapter {
             }
         }
     }
-
 }
 
 if (require.main !== module) {
     // Export the constructor in compact mode
     /**
-     * @param {Partial<utils.AdapterOptions>} [options={}]
+     * @param {Partial<utils.AdapterOptions>} [options]
      */
-    module.exports = (options) => new Logsearch(options);
+    module.exports = options => new Logsearch(options);
 } else {
     // otherwise start the instance directly
     new Logsearch();

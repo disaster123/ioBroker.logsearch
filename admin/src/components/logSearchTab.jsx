@@ -1,41 +1,41 @@
-import React from "react";
-import { withStyles } from "@mui/styles";
-import { alpha } from "@mui/material/styles";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import FormControl from "@mui/material/FormControl";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import InputLabel from "@mui/material/InputLabel";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
+import React from 'react';
+import { withStyles } from '@mui/styles';
+import { alpha } from '@mui/material/styles';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 
 const DEBOUNCE_MS = 700;
 const AUTO_UPDATE_MS = 5000;
 const AUTO_UPDATE_RESUME_GAP_MS = 20000;
 const RESUME_RESYNC_THROTTLE_MS = 1000;
 
-const styles = (theme) => ({
+const styles = theme => ({
     root: {
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         gap: theme.spacing(1.25),
-        height: "100vh",
+        height: '100vh',
         minHeight: 0,
-        boxSizing: "border-box",
+        boxSizing: 'border-box',
         padding: theme.spacing(3, 2, 2),
-        overflow: "hidden",
+        overflow: 'hidden',
         background: theme.palette.background.default,
-        [theme.breakpoints.down("sm")]: {
-            height: "auto",
-            minHeight: "100vh",
-            overflow: "visible",
+        [theme.breakpoints.down('sm')]: {
+            height: 'auto',
+            minHeight: '100vh',
+            overflow: 'visible',
             padding: theme.spacing(3, 1.5, 1.5),
         },
     },
@@ -47,52 +47,52 @@ const styles = (theme) => ({
     },
     searchPanel: {
         padding: theme.spacing(1.25, 1.5),
-        flex: "0 0 auto",
-        position: "sticky",
+        flex: '0 0 auto',
+        position: 'sticky',
         top: 0,
         zIndex: 2,
     },
     controlsGrid: {
-        display: "grid",
-        gridTemplateColumns: "minmax(320px, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(110px, 130px)",
+        display: 'grid',
+        gridTemplateColumns: 'minmax(320px, 1fr) minmax(90px, 110px) minmax(120px, 140px) minmax(110px, 130px)',
         gap: theme.spacing(1),
-        alignItems: "center",
-        [theme.breakpoints.down("md")]: {
-            gridTemplateColumns: "minmax(260px, 1fr) repeat(3, minmax(96px, 1fr))",
+        alignItems: 'center',
+        [theme.breakpoints.down('md')]: {
+            gridTemplateColumns: 'minmax(260px, 1fr) repeat(3, minmax(96px, 1fr))',
         },
-        [theme.breakpoints.down("sm")]: {
-            gridTemplateColumns: "1fr 1fr",
+        [theme.breakpoints.down('sm')]: {
+            gridTemplateColumns: '1fr 1fr',
         },
     },
     searchField: {
-        [theme.breakpoints.down("sm")]: {
-            gridColumn: "1 / -1",
+        [theme.breakpoints.down('sm')]: {
+            gridColumn: '1 / -1',
         },
     },
     actionsRow: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         gap: theme.spacing(0.75),
-        flexWrap: "wrap",
+        flexWrap: 'wrap',
         marginTop: theme.spacing(0.75),
     },
     buttonGroup: {
-        display: "inline-flex",
-        alignItems: "center",
+        display: 'inline-flex',
+        alignItems: 'center',
         gap: theme.spacing(0.75),
-        flexWrap: "wrap",
+        flexWrap: 'wrap',
     },
     statusBadges: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
         gap: theme.spacing(0.75),
-        flexWrap: "wrap",
+        flexWrap: 'wrap',
     },
     statusBadge: {
-        display: "inline-flex",
-        alignItems: "center",
+        display: 'inline-flex',
+        alignItems: 'center',
         minHeight: 22,
         padding: theme.spacing(0.125, 0.75),
         borderRadius: 999,
@@ -108,27 +108,27 @@ const styles = (theme) => ({
         borderColor: theme.palette.warning.main,
     },
     resultsPanel: {
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         minHeight: 0,
-        flex: "1 1 auto",
-        overflow: "hidden",
+        flex: '1 1 auto',
+        overflow: 'hidden',
     },
     tableScroller: {
-        flex: "1 1 auto",
+        flex: '1 1 auto',
         minHeight: 0,
-        overflow: "auto",
-        [theme.breakpoints.down("sm")]: {
-            maxHeight: "65vh",
+        overflow: 'auto',
+        [theme.breakpoints.down('sm')]: {
+            maxHeight: '65vh',
         },
     },
     resultTable: {
-        tableLayout: "fixed",
+        tableLayout: 'fixed',
         minWidth: 920,
-        borderCollapse: "separate",
+        borderCollapse: 'separate',
         borderSpacing: 0,
-        "& th": {
-            position: "sticky",
+        '& th': {
+            position: 'sticky',
             top: 0,
             zIndex: 3,
             background: theme.palette.background.paper,
@@ -137,43 +137,43 @@ const styles = (theme) => ({
             borderBottom: `2px solid ${theme.palette.divider}`,
             boxShadow: `0 2px 3px ${theme.palette.action.disabledBackground}`,
         },
-        "& th, & td": {
+        '& th, & td': {
             padding: theme.spacing(0.75, 1.25),
-            verticalAlign: "top",
+            verticalAlign: 'top',
             lineHeight: 1.35,
         },
-        "& tbody tr:nth-of-type(even)": {
+        '& tbody tr:nth-of-type(even)': {
             background: theme.palette.action.selected,
         },
-        "& tbody tr:hover": {
+        '& tbody tr:hover': {
             background: theme.palette.action.hover,
         },
-        "& tbody tr.rowWarn": {
+        '& tbody tr.rowWarn': {
             background: alpha(theme.palette.warning.main, 0.12),
         },
-        "& tbody tr.rowWarn:hover": {
+        '& tbody tr.rowWarn:hover': {
             background: alpha(theme.palette.warning.main, 0.18),
         },
-        "& tbody tr.rowError": {
+        '& tbody tr.rowError': {
             background: alpha(theme.palette.error.main, 0.12),
         },
-        "& tbody tr.rowError:hover": {
+        '& tbody tr.rowError:hover': {
             background: alpha(theme.palette.error.main, 0.18),
         },
     },
     tableCellTime: {
-        whiteSpace: "nowrap",
+        whiteSpace: 'nowrap',
         width: 210,
     },
     tableCellLevel: {
         width: 88,
-        whiteSpace: "nowrap",
+        whiteSpace: 'nowrap',
     },
     tableCellSource: {
         width: 180,
-        wordBreak: "break-word",
+        wordBreak: 'break-word',
     },
-    tableCellMessage: { whiteSpace: "normal", wordBreak: "break-word" },
+    tableCellMessage: { whiteSpace: 'normal', wordBreak: 'break-word' },
     emptyState: {
         padding: theme.spacing(3, 2),
         color: theme.palette.text.secondary,
@@ -190,12 +190,12 @@ class LogSearchTab extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            searchText: "",
+            searchText: '',
             hours: props.defaultHours || 72,
-            level: "all",
+            level: 'all',
             maxRows: props.defaultMaxRows || 500,
             loading: false,
-            error: "",
+            error: '',
             rows: [],
             truncated: false,
             hasSearched: false,
@@ -217,13 +217,13 @@ class LogSearchTab extends React.Component {
     }
 
     componentDidMount() {
-        if (typeof document !== "undefined") {
-            document.addEventListener("visibilitychange", this.handleResumeEvent);
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this.handleResumeEvent);
         }
-        if (typeof window !== "undefined") {
-            window.addEventListener("focus", this.handleResumeEvent);
-            window.addEventListener("pageshow", this.handleResumeEvent);
-            window.addEventListener("online", this.handleResumeEvent);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('focus', this.handleResumeEvent);
+            window.addEventListener('pageshow', this.handleResumeEvent);
+            window.addEventListener('online', this.handleResumeEvent);
         }
         this.onSearch();
     }
@@ -237,10 +237,10 @@ class LogSearchTab extends React.Component {
         }
 
         if (
-            prevProps.socketReady === false
-            && this.props.socketReady === true
-            && this.state.hasSearched
-            && (this.resumeResyncPending || this.isAutoUpdateStale())
+            prevProps.socketReady === false &&
+            this.props.socketReady === true &&
+            this.state.hasSearched &&
+            (this.resumeResyncPending || this.isAutoUpdateStale())
         ) {
             this.resumeResyncPending = false;
             this.resyncAfterResume();
@@ -249,13 +249,13 @@ class LogSearchTab extends React.Component {
 
     componentWillUnmount() {
         this.unmounted = true;
-        if (typeof document !== "undefined") {
-            document.removeEventListener("visibilitychange", this.handleResumeEvent);
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this.handleResumeEvent);
         }
-        if (typeof window !== "undefined") {
-            window.removeEventListener("focus", this.handleResumeEvent);
-            window.removeEventListener("pageshow", this.handleResumeEvent);
-            window.removeEventListener("online", this.handleResumeEvent);
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('focus', this.handleResumeEvent);
+            window.removeEventListener('pageshow', this.handleResumeEvent);
+            window.removeEventListener('online', this.handleResumeEvent);
         }
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
@@ -327,11 +327,11 @@ class LogSearchTab extends React.Component {
         return !!this.lastAutoUpdateTickAt && now - this.lastAutoUpdateTickAt > AUTO_UPDATE_RESUME_GAP_MS;
     }
 
-    handleResumeEvent = (event) => {
+    handleResumeEvent = event => {
         if (this.unmounted || !this.state.hasSearched) {
             return;
         }
-        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
             return;
         }
         if (!this.isSocketReady()) {
@@ -341,7 +341,7 @@ class LogSearchTab extends React.Component {
 
         const now = Date.now();
         const autoUpdateStale = this.isAutoUpdateStale(now);
-        if (event?.type === "online" && autoUpdateStale) {
+        if (event?.type === 'online' && autoUpdateStale) {
             this.resumeResyncPending = true;
         }
         if (!autoUpdateStale) {
@@ -373,7 +373,12 @@ class LogSearchTab extends React.Component {
     }
 
     getRowIdentity(row) {
-        return row?.rowId || row?.rawPlain || row?.raw || `${row?.ts || ""}|${row?.level || ""}|${row?.source || ""}|${row?.message || ""}`;
+        return (
+            row?.rowId ||
+            row?.rawPlain ||
+            row?.raw ||
+            `${row?.ts || ''}|${row?.level || ''}|${row?.source || ''}|${row?.message || ''}`
+        );
     }
 
     getRenderKey(row, index) {
@@ -381,7 +386,7 @@ class LogSearchTab extends React.Component {
     }
 
     getRowTimestamp(row) {
-        const timestamp = new Date(String(row?.ts || "").replace(" ", "T")).getTime();
+        const timestamp = new Date(String(row?.ts || '').replace(' ', 'T')).getTime();
         return Number.isFinite(timestamp) ? timestamp : -Infinity;
     }
 
@@ -396,13 +401,17 @@ class LogSearchTab extends React.Component {
             seen.add(key);
             merged.push(row);
         }
-        return merged
-            .sort((a, b) => this.getRowTimestamp(b) - this.getRowTimestamp(a))
-            .slice(0, maxRows);
+        return merged.sort((a, b) => this.getRowTimestamp(b) - this.getRowTimestamp(a)).slice(0, maxRows);
     }
 
     runAutoUpdate = async () => {
-        if (this.unmounted || this.searchInFlight || this.pendingSearch || this.autoUpdateInFlight || !this.state.cursor) {
+        if (
+            this.unmounted ||
+            this.searchInFlight ||
+            this.pendingSearch ||
+            this.autoUpdateInFlight ||
+            !this.state.cursor
+        ) {
             return;
         }
 
@@ -420,13 +429,17 @@ class LogSearchTab extends React.Component {
         };
 
         try {
-            const response = await this.props.sendTo("searchLogs", payload);
+            const response = await this.props.sendTo('searchLogs', payload);
             if (response?.ok === false) {
-                throw new Error(response.error || "Auto update failed");
+                throw new Error(response.error || 'Auto update failed');
             }
-            if (!this.unmounted && requestToken === this.autoUpdateRequestToken && currentGeneration === this.searchGeneration) {
+            if (
+                !this.unmounted &&
+                requestToken === this.autoUpdateRequestToken &&
+                currentGeneration === this.searchGeneration
+            ) {
                 const responseRows = Array.isArray(response?.rows) ? response.rows : [];
-                this.setState((state) => ({
+                this.setState(state => ({
                     rows: this.mergeAutoUpdateRows(state.rows, responseRows, maxRows),
                     truncated: state.truncated || !!response?.truncated,
                     cursor: response?.cursor || state.cursor,
@@ -442,7 +455,6 @@ class LogSearchTab extends React.Component {
         }
     };
 
-
     getNumberOrDefault(value, fallback) {
         const parsed = Number(value);
         return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -450,17 +462,29 @@ class LogSearchTab extends React.Component {
 
     getLevelClass(level) {
         const { classes } = this.props;
-        if (level === "error") return classes.levelError;
-        if (level === "warn") return classes.levelWarn;
-        if (level === "debug") return classes.levelDebug;
-        if (level === "silly") return classes.levelSilly;
+        if (level === 'error') {
+            return classes.levelError;
+        }
+        if (level === 'warn') {
+            return classes.levelWarn;
+        }
+        if (level === 'debug') {
+            return classes.levelDebug;
+        }
+        if (level === 'silly') {
+            return classes.levelSilly;
+        }
         return classes.levelInfo;
     }
 
     getRowClass(level) {
-        if (level === "error") return "rowError";
-        if (level === "warn") return "rowWarn";
-        return "";
+        if (level === 'error') {
+            return 'rowError';
+        }
+        if (level === 'warn') {
+            return 'rowWarn';
+        }
+        return '';
     }
 
     queueDebouncedSearch() {
@@ -496,32 +520,43 @@ class LogSearchTab extends React.Component {
             maxRows: this.getNumberOrDefault(this.state.maxRows, 500),
         };
 
-        this.setState({ loading: true, error: "", hasSearched: true, cursor: null, autoUpdateActive: false });
+        this.setState({ loading: true, error: '', hasSearched: true, cursor: null, autoUpdateActive: false });
         try {
-            const response = await this.props.sendTo("searchLogs", payload);
+            const response = await this.props.sendTo('searchLogs', payload);
             if (response?.ok === false) {
-                throw new Error(response.error || "Search failed");
+                throw new Error(response.error || 'Search failed');
             }
-            if (!this.unmounted && requestToken === this.searchRequestToken && currentGeneration === this.searchGeneration) {
+            if (
+                !this.unmounted &&
+                requestToken === this.searchRequestToken &&
+                currentGeneration === this.searchGeneration
+            ) {
                 if (!this.pendingSearch) {
                     this.resumeResyncPending = false;
                 }
-                this.setState({
-                    rows: Array.isArray(response?.rows) ? response.rows : [],
-                    truncated: !!response?.truncated,
-                    loading: false,
-                    cursor: response?.cursor || null,
-                }, () => this.startAutoUpdate());
+                this.setState(
+                    {
+                        rows: Array.isArray(response?.rows) ? response.rows : [],
+                        truncated: !!response?.truncated,
+                        loading: false,
+                        cursor: response?.cursor || null,
+                    },
+                    () => this.startAutoUpdate(),
+                );
             }
         } catch (error) {
-            if (!this.unmounted && requestToken === this.searchRequestToken && currentGeneration === this.searchGeneration) {
+            if (
+                !this.unmounted &&
+                requestToken === this.searchRequestToken &&
+                currentGeneration === this.searchGeneration
+            ) {
                 this.setState({
                     loading: false,
                     rows: [],
                     truncated: false,
                     cursor: null,
                     autoUpdateActive: false,
-                    error: error?.message || "Search failed",
+                    error: error?.message || 'Search failed',
                 });
             }
         } finally {
@@ -555,13 +590,16 @@ class LogSearchTab extends React.Component {
             this.pendingSearch = false;
             this.searchGeneration += 1;
         }
-        this.setState({
-            searchText: "",
-            error: "",
-            loading: false,
-            cursor: null,
-            autoUpdateActive: false,
-        }, () => this.onSearch());
+        this.setState(
+            {
+                searchText: '',
+                error: '',
+                loading: false,
+                cursor: null,
+                autoUpdateActive: false,
+            },
+            () => this.onSearch(),
+        );
     }
 
     onFieldChange = (field, value) => {
@@ -586,7 +624,7 @@ class LogSearchTab extends React.Component {
                             className={classes.searchField}
                             label="Search text"
                             value={this.state.searchText}
-                            onChange={(e) => this.onFieldChange("searchText", e.target.value)}
+                            onChange={e => this.onFieldChange('searchText', e.target.value)}
                             size="small"
                             fullWidth
                         />
@@ -594,19 +632,25 @@ class LogSearchTab extends React.Component {
                             label="Hours"
                             type="number"
                             value={this.state.hours}
-                            onChange={(e) => this.onFieldChange("hours", e.target.value)}
+                            onChange={e => this.onFieldChange('hours', e.target.value)}
                             size="small"
                             fullWidth
                         />
-                        <FormControl fullWidth size="small">
+                        <FormControl
+                            fullWidth
+                            size="small"
+                        >
                             <InputLabel>Level</InputLabel>
                             <Select
                                 value={this.state.level}
                                 label="Level"
-                                onChange={(e) => this.onFieldChange("level", e.target.value)}
+                                onChange={e => this.onFieldChange('level', e.target.value)}
                             >
-                                {["all", "error", "warn", "info", "debug", "silly"].map((level) => (
-                                    <MenuItem key={level} value={level}>
+                                {['all', 'error', 'warn', 'info', 'debug', 'silly'].map(level => (
+                                    <MenuItem
+                                        key={level}
+                                        value={level}
+                                    >
                                         {level}
                                     </MenuItem>
                                 ))}
@@ -616,7 +660,7 @@ class LogSearchTab extends React.Component {
                             label="Max rows"
                             type="number"
                             value={this.state.maxRows}
-                            onChange={(e) => this.onFieldChange("maxRows", e.target.value)}
+                            onChange={e => this.onFieldChange('maxRows', e.target.value)}
                             size="small"
                             fullWidth
                         />
@@ -633,19 +677,32 @@ class LogSearchTab extends React.Component {
                             >
                                 Search
                             </Button>
-                            <Button variant="outlined" disabled={this.state.loading} onClick={() => this.onClear()} size="small">
+                            <Button
+                                variant="outlined"
+                                disabled={this.state.loading}
+                                onClick={() => this.onClear()}
+                                size="small"
+                            >
                                 Clear filter
                             </Button>
                             {this.state.loading ? <CircularProgress size={20} /> : null}
                         </div>
                         <div className={classes.statusBadges}>
                             {this.state.autoUpdateActive ? (
-                                <Typography component="span" variant="caption" className={classes.statusBadge}>
+                                <Typography
+                                    component="span"
+                                    variant="caption"
+                                    className={classes.statusBadge}
+                                >
                                     Auto update active
                                 </Typography>
                             ) : null}
                             {this.state.hasSearched && !this.state.error ? (
-                                <Typography component="span" variant="caption" className={classes.statusBadge}>
+                                <Typography
+                                    component="span"
+                                    variant="caption"
+                                    className={classes.statusBadge}
+                                >
                                     Hits: {this.state.rows.length}
                                 </Typography>
                             ) : null}
@@ -661,14 +718,19 @@ class LogSearchTab extends React.Component {
                         </div>
                     </div>
 
-                    {this.state.error ? <Typography className={classes.errorText}>Error: {this.state.error}</Typography> : null}
+                    {this.state.error ? (
+                        <Typography className={classes.errorText}>Error: {this.state.error}</Typography>
+                    ) : null}
                 </Paper>
 
                 {this.state.hasSearched && !this.state.error ? (
                     <Paper className={`${classes.panel} ${classes.resultsPanel}`}>
                         {this.state.rows.length ? (
                             <div className={classes.tableScroller}>
-                                <Table size="small" className={classes.resultTable}>
+                                <Table
+                                    size="small"
+                                    className={classes.resultTable}
+                                >
                                     <colgroup>
                                         <col style={{ width: 210 }} />
                                         <col style={{ width: 88 }} />
@@ -685,13 +747,20 @@ class LogSearchTab extends React.Component {
                                     </TableHead>
                                     <TableBody>
                                         {this.state.rows.map((row, index) => (
-                                            <TableRow key={this.getRenderKey(row, index)} className={this.getRowClass(row.level)}>
-                                                <TableCell className={classes.tableCellTime}>{row.ts || ""}</TableCell>
-                                                <TableCell className={`${classes.tableCellLevel} ${this.getLevelClass(row.level)}`}>
+                                            <TableRow
+                                                key={this.getRenderKey(row, index)}
+                                                className={this.getRowClass(row.level)}
+                                            >
+                                                <TableCell className={classes.tableCellTime}>{row.ts || ''}</TableCell>
+                                                <TableCell
+                                                    className={`${classes.tableCellLevel} ${this.getLevelClass(row.level)}`}
+                                                >
                                                     {row.level}
                                                 </TableCell>
                                                 <TableCell className={classes.tableCellSource}>{row.source}</TableCell>
-                                                <TableCell className={classes.tableCellMessage}>{row.message}</TableCell>
+                                                <TableCell className={classes.tableCellMessage}>
+                                                    {row.message}
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

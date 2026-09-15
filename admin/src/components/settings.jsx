@@ -1,11 +1,11 @@
-import React from "react";
-import { withStyles } from "@mui/styles";
-import TextField from "@mui/material/TextField";
+import React from 'react';
+import { withStyles } from '@mui/styles';
+import TextField from '@mui/material/TextField';
 
 const styles = () => ({
     root: {
-        display: "flex",
-        flexDirection: "column",
+        display: 'flex',
+        flexDirection: 'column',
         paddingTop: 16,
     },
     input: {
@@ -24,8 +24,8 @@ class Settings extends React.Component {
                 <TextField
                     label="Log directory"
                     className={classes.input}
-                    value={native.logDirectory || ""}
-                    onChange={(e) => onChange("logDirectory", e.target.value)}
+                    value={native.logDirectory || ''}
+                    onChange={e => onChange('logDirectory', e.target.value)}
                     margin="normal"
                 />
                 <TextField
@@ -33,7 +33,7 @@ class Settings extends React.Component {
                     className={classes.input}
                     type="number"
                     value={native.defaultHours ?? 72}
-                    onChange={(e) => onChange("defaultHours", parseInt(e.target.value, 10) || 0)}
+                    onChange={e => onChange('defaultHours', parseInt(e.target.value, 10) || 0)}
                     margin="normal"
                 />
                 <TextField
@@ -41,7 +41,7 @@ class Settings extends React.Component {
                     className={classes.input}
                     type="number"
                     value={native.defaultMaxRows}
-                    onChange={(e) => onChange("defaultMaxRows", parseInt(e.target.value, 10) || 0)}
+                    onChange={e => onChange('defaultMaxRows', parseInt(e.target.value, 10) || 0)}
                     margin="normal"
                 />
             </form>
