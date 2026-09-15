@@ -14,7 +14,7 @@ const { searchLogs } = require('./lib/log-search');
 
 class Logsearch extends utils.Adapter {
     /**
-     * @param {Partial<utils.AdapterOptions>} [options]
+     * @param {Partial<utils.AdapterOptions>} [options] Adapter options.
      */
     constructor(options) {
         super({
@@ -38,7 +38,7 @@ class Logsearch extends utils.Adapter {
     /**
      * Is called when adapter shuts down - callback has to be called under any circumstances!
      *
-     * @param {() => void} callback
+     * @param {() => void} callback Completion callback.
      */
     onUnload(callback) {
         try {
@@ -74,8 +74,8 @@ class Logsearch extends utils.Adapter {
     /**
      * Is called if a subscribed state changes
      *
-     * @param {string} id
-     * @param {ioBroker.State | null | undefined} state
+     * @param {string} id State ID.
+     * @param {ioBroker.State | null | undefined} state Updated state, or null when deleted.
      */
     onStateChange(id, state) {
         if (state) {
@@ -90,7 +90,7 @@ class Logsearch extends utils.Adapter {
     /**
      * Some message was sent to this instance over message box.
      *
-     * @param {ioBroker.Message} obj
+     * @param {ioBroker.Message} obj Received ioBroker message.
      */
     async onMessage(obj) {
         if (!obj || obj.command !== 'searchLogs') {
@@ -140,7 +140,7 @@ class Logsearch extends utils.Adapter {
 if (require.main !== module) {
     // Export the constructor in compact mode
     /**
-     * @param {Partial<utils.AdapterOptions>} [options]
+     * @param {Partial<utils.AdapterOptions>} [options] Adapter options.
      */
     module.exports = options => new Logsearch(options);
 } else {

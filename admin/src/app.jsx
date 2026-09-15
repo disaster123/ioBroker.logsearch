@@ -4,9 +4,6 @@ import { withStyles } from '@mui/styles';
 import { AdminConnection, GenericApp } from '@iobroker/adapter-react-v5';
 import Settings from './components/settings';
 
-/**
- * @param _theme
- */
 const styles = _theme => ({
     root: {},
 });

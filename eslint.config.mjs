@@ -11,6 +11,7 @@ export default [
         files: ['**/*.js'],
         rules: {
             'jsdoc/check-tag-names': 'off',
+            'jsdoc/reject-any-type': 'off',
         },
     },
     ...adminReactConfig,
@@ -29,6 +30,7 @@ export default [
             '@typescript-eslint/no-unsafe-call': 'off',
             '@typescript-eslint/no-unsafe-member-access': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
+            'class-methods-use-this': 'off',
         },
     },
     {
