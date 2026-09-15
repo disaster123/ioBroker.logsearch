@@ -26,11 +26,9 @@ The text filter is a plain, case-insensitive substring search across the complet
 
 ## Installation
 
-The adapter is currently in development and is not yet published on npm. Install it through ioBroker Admin's custom installation dialog using this GitHub URL:
+The adapter is published on [npm](https://www.npmjs.com/package/iobroker.logsearch). Inclusion in the official ioBroker adapter catalog is pending.
 
-```text
-https://github.com/disaster123/ioBroker.logsearch
-```
+Once included, select **Log Search** in ioBroker Admin's adapter catalog and add an instance.
 
 ## Configuration
 
@@ -72,7 +70,9 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 
 ### **WORK IN PROGRESS**
 
-- (@disaster123) Modernize testing, repository metadata, and release automation.
+### 0.0.2 (2026-09-15)
+
+- (@disaster123) Update documentation for the npm publication and prepare automated releases.
 
 ### 0.0.1
 

@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "news": {
+            "0.0.2": {
+                "en": "Update documentation for the npm publication and prepare automated releases.",
+                "de": "Dokumentation zur npm-Veröffentlichung aktualisiert und automatische Releases vorbereitet.",
+                "ru": "Обновлена документация о публикации в npm и подготовлены автоматические выпуски.",
+                "pt": "Documentação atualizada para a publicação no npm e preparação de lançamentos automáticos.",
+                "nl": "Documentatie bijgewerkt voor de npm-publicatie en automatische releases voorbereid.",
+                "fr": "Documentation mise à jour pour la publication sur npm et préparation des versions automatiques.",
+                "it": "Documentazione aggiornata per la pubblicazione su npm e preparazione dei rilasci automatici.",
+                "es": "Documentación actualizada para la publicación en npm y preparación de versiones automáticas.",
+                "pl": "Zaktualizowano dokumentację publikacji w npm i przygotowano automatyczne wydania.",
+                "uk": "Оновлено документацію щодо публікації в npm і підготовлено автоматичні випуски.",
+                "zh-cn": "更新 npm 发布文档并准备自动发布。"
+            },
             "0.0.1": {
                 "en": "initial release",
                 "de": "Erstveröffentlichung",
