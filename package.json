@@ -19,7 +19,7 @@
     "url": "https://github.com/Disaster123/ioBroker.logsearch.git"
   },
   "engines": {
-    "node": ">= 20"
+    "node": ">= 22"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.3.2"
@@ -36,11 +36,11 @@
     "@iobroker/testing": "^5.2.2",
     "@mui/material": "^6.4.8",
     "@mui/styles": "^6.4.8",
-    "@tsconfig/node20": "^20.1.9",
+    "@tsconfig/node22": "^22.0.6",
     "@types/chai": "^4.3.20",
     "@types/chai-as-promised": "^7.1.8",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.9.1",
+    "@types/node": "^22.20.1",
     "@types/proxyquire": "^1.3.31",
     "@types/react": "^17.0.92",
     "@types/react-dom": "^17.0.26",
@@ -56,7 +56,7 @@
     "react-dom": "^17.0.2",
     "sinon": "^22.0.0",
     "sinon-chai": "^3.7.0",
-    "typescript": "~6.0.3"
+    "typescript": "~5.9.3"
   },
   "main": "main.js",
   "files": [
