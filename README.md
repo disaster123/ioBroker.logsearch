@@ -78,6 +78,8 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 
 - (@Disaster123) Initial release.
 
+Older entries will be archived in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+
 ## License
 
 MIT License

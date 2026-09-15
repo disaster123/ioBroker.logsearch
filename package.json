@@ -50,6 +50,7 @@
   },
   "main": "main.js",
   "files": [
+    "!CHANGELOG_OLD.md",
     "admin{,/!(src)/**}/!(tsconfig|tsconfig.*|.eslintrc).{json,json5}",
     "admin{,/!(src)/**}/*.{html,css,png,svg,jpg,js}",
     "admin/build/",
