@@ -72,6 +72,10 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 
 ### **WORK IN PROGRESS**
 
+- (@disaster123) Modernize testing, repository metadata, and release automation.
+
+### 0.0.1
+
 - (@Disaster123) Initial release.
 
 ## License
