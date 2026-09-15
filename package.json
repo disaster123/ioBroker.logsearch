@@ -12,7 +12,8 @@
     "log",
     "search",
     "full log search",
-    "ui"
+    "ui",
+    "ioBroker"
   ],
   "repository": {
     "type": "git",
