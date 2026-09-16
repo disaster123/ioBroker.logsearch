@@ -109,7 +109,7 @@ adapter tests on Node.js 22, 24, and 26 across Linux, Windows, and macOS.
 
 ### Preparing a release
 
-Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Feature pull requests do not update the generated files in `build/` and `admin/`.
+Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `src-admin/package.json`, `io-package.json`, and both root version fields in each `package-lock.json` (root and `src-admin/`), along with the changelog and translated release notes. Feature pull requests do not update the generated files in `build/` and `admin/`.
 
 Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the adapter and the Admin interface for every pull request. After all checks for a push to `main` pass, CI commits the generated `build/` and `admin/` files to `main` so installations directly from GitHub include the compiled adapter and the Admin interface. Dependency updates only commit the updated package lock; the subsequent test workflow publishes the matching Admin build.
 
@@ -122,11 +122,14 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.0.4 (2026-09-16)
 
 - (@GermanBluefox) Detect the log directory and the log file naming from the js-controller configuration; an empty **Log directory** now means automatic detection.
 - (@GermanBluefox) Migrate the adapter and the Admin GUI to TypeScript.
 - (@GermanBluefox) Build the Admin GUI with Vite and `@iobroker/gui-components` (React 19, MUI 9).
+- (@GermanBluefox) Include the compiled adapter and Admin UI in the CI-generated commit for installations from GitHub.
+- (@disaster123) Resolve log paths using the controller logger's configured destination so stale logs in other directories cannot override it.
+- (@disaster123) Fix standalone GUI linting and install locked GUI dependencies with proper error handling.
 
 ### 0.0.3 (2026-09-16)
 

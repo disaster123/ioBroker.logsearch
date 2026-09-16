@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "0.0.3",
+        "version": "0.0.4",
         "news": {
+            "0.0.4": {
+                "en": "Detect log locations automatically, migrate the adapter to TypeScript and the Admin UI to Vite, and fix log path selection and GUI builds.",
+                "de": "Logverzeichnisse automatisch erkennen, Adapter auf TypeScript und Admin-Oberfläche auf Vite umstellen sowie Pfadauswahl und GUI-Builds korrigieren.",
+                "ru": "Добавлено автоматическое определение расположения журналов, адаптер переведён на TypeScript, интерфейс Admin — на Vite; исправлены выбор пути журналов и сборка интерфейса.",
+                "pt": "Detecção automática da localização dos logs, migração do adaptador para TypeScript e da interface Admin para Vite, com correções na seleção do caminho e na compilação da interface.",
+                "nl": "Automatische detectie van loglocaties, migratie van de adapter naar TypeScript en de Admin-interface naar Vite, en correcties voor de padselectie en GUI-builds.",
+                "fr": "Détection automatique de l’emplacement des journaux, migration de l’adaptateur vers TypeScript et de l’interface Admin vers Vite, et correction du choix du chemin et de la compilation de l’interface.",
+                "it": "Rilevamento automatico della posizione dei log, migrazione dell’adattatore a TypeScript e dell’interfaccia Admin a Vite, con correzioni alla selezione del percorso e alla compilazione dell’interfaccia.",
+                "es": "Detección automática de la ubicación de los registros, migración del adaptador a TypeScript y de la interfaz Admin a Vite, y correcciones en la selección de rutas y la compilación de la interfaz.",
+                "pl": "Dodano automatyczne wykrywanie lokalizacji dzienników, przeniesiono adapter na TypeScript i interfejs Admin na Vite oraz poprawiono wybór ścieżki i kompilację interfejsu.",
+                "uk": "Додано автоматичне визначення розташування журналів, адаптер переведено на TypeScript, інтерфейс Admin — на Vite; виправлено вибір шляху журналів і збирання інтерфейсу.",
+                "zh-cn": "自动检测日志位置，将适配器迁移至 TypeScript、管理界面迁移至 Vite，并修复日志路径选择和管理界面构建问题。"
+            },
             "0.0.3": {
                 "en": "Add a toggleable new-log view and export displayed log lines as a text file.",
                 "de": "Umschaltbare Ansicht für neue Logeinträge und Export der angezeigten Logzeilen als Textdatei hinzugefügt.",
