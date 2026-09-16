@@ -1,0 +1,732 @@
+import { expect } from 'chai';
+import fsSync from 'node:fs';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
+
+import { parseLogLine, searchLogs } from '../src/lib/logSearch';
+import type { LogLocation, SearchLogsOptions, SearchResult } from '../src/lib/types';
+
+function toLogTs(date: Date): string {
+    const pad = (value: number, length = 2): string => String(value).padStart(length, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
+}
+
+function makeLocation(directory: string, prefix = 'iobroker', extension = '.log'): LogLocation {
+    return { directory, prefix, extension, source: 'manual' };
+}
+
+describe('logSearch utility', () => {
+    let tempDir: string;
+    // Match the local timestamps used by the log fixtures in every time zone.
+    const fixedNow = new Date(2026, 4, 27, 12, 0, 0, 0);
+    const fixedNowIso = fixedNow.toISOString();
+
+    /** Run a search against the temp dir and assert that it succeeded. */
+    async function run(options: Omit<SearchLogsOptions, 'location'> & { location?: LogLocation }): Promise<SearchResult> {
+        const result = await searchLogs({ ...options, location: options.location || makeLocation(tempDir) });
+        expect(result.ok).to.equal(true);
+        return result as SearchResult;
+    }
+
+    beforeEach(async () => {
+        tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'logsearch-'));
+    });
+
+    afterEach(async () => {
+        await fs.rm(tempDir, { recursive: true, force: true });
+    });
+
+    describe('From now (startNow / since)', () => {
+        it('starts from the server time without reading historical contents and polls only new entries', async () => {
+            const file = path.join(tempDir, 'iobroker.current.log');
+            const oldLine = `${toLogTs(fixedNow)} - info: host.a old entry
+`;
+            await fs.writeFile(file, oldLine);
+
+            const originalCreateReadStream = fsSync.createReadStream;
+            let readStreamCalled = false;
+            fsSync.createReadStream = function spy(this: any, ...args: any[]): any {
+                readStreamCalled = true;
+                return (originalCreateReadStream as any).apply(this, args);
+            } as typeof fsSync.createReadStream;
+            let start: SearchResult;
+            try {
+                start = await run({ startNow: true, now: fixedNow });
+            } finally {
+                fsSync.createReadStream = originalCreateReadStream;
+            }
+            expect(readStreamCalled).to.equal(false);
+            expect(start.rows).to.deep.equal([]);
+            expect(start.since).to.equal(fixedNow.getTime());
+            expect(start.cursor!.byteOffset).to.equal(Buffer.byteLength(oldLine));
+
+            const later = new Date(fixedNow.getTime() + 1000);
+            await fs.appendFile(file, `${toLogTs(later)} - info: host.a new entry
+`);
+            const poll = await run({ activeOnly: true, cursor: start.cursor!, since: start.since, now: later });
+            expect(poll.rows.map(row => row.message)).to.deep.equal(['new entry']);
+            const resync = await run({ since: start.since, now: later });
+            expect(resync.rows.map(row => row.message)).to.deep.equal(['new entry']);
+            const history = await run({ now: later });
+            expect(history.rows).to.have.length(2);
+        });
+
+        it('keeps the start boundary across filters, gzip history and log rotation', async () => {
+            const before = toLogTs(new Date(fixedNow.getTime() - 1000));
+            const after = toLogTs(new Date(fixedNow.getTime() + 1000));
+            await fs.writeFile(
+                path.join(tempDir, 'iobroker.2026-05-27.log.gz'),
+                zlib.gzipSync(`${before} - error: host.a match old
+`),
+            );
+            await fs.writeFile(
+                path.join(tempDir, 'iobroker.current.log'),
+                `${before} - error: host.a match old
+${after} - error: host.a match new
+${after} - info: host.a match info
+`,
+            );
+            const options = {
+                since: fixedNow.getTime(),
+                now: fixedNow.getTime() + 2000,
+                level: 'error' as const,
+                searchText: 'match',
+            };
+            const resync = await run(options);
+            expect(resync.rows.map(row => row.message)).to.deep.equal(['match new']);
+            const rotated = await run({
+                ...options,
+                activeOnly: true,
+                cursor: { file: 'iobroker.2026-05-26.log', byteOffset: 10000 },
+            });
+            expect(rotated.rows.map(row => row.message)).to.deep.equal(['match new']);
+            expect(resync.truncated).to.equal(false);
+        });
+
+        it('keeps polling when started before any log file exists', async () => {
+            const start = await run({ startNow: true, now: fixedNow });
+            expect(start.cursor).to.be.an('object');
+            const empty = await run({ since: start.since, activeOnly: true, cursor: start.cursor!, now: fixedNow });
+            expect(empty.cursor).to.be.an('object');
+            const resync = await run({ since: start.since, now: fixedNow });
+            expect(resync.cursor).to.be.an('object');
+
+            const later = new Date(fixedNow.getTime() + 1000);
+            await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), `${toLogTs(later)} - info: host.a first entry
+`);
+            const poll = await run({ since: start.since, activeOnly: true, cursor: empty.cursor!, now: later });
+            expect(poll.rows.map(row => row.message)).to.deep.equal(['first entry']);
+        });
+
+        it('rejects invalid start boundaries instead of showing old entries', async () => {
+            for (const since of [NaN, Infinity, -1]) {
+                const result = await searchLogs({ location: makeLocation(tempDir), since });
+                expect(result.ok).to.equal(false);
+            }
+        });
+    });
+
+    it('should parse timestamp and level', () => {
+        const parsed = parseLogLine('2026-05-27 10:11:12.123 - warn: host.adapter Some message');
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 10:11:12.123',
+            level: 'warn',
+            source: 'host.adapter',
+            message: 'Some message',
+            raw: '2026-05-27 10:11:12.123 - warn: host.adapter Some message',
+            rawPlain: '2026-05-27 10:11:12.123 - warn: host.adapter Some message',
+        });
+    });
+
+    it('should parse real ioBroker line with process id', () => {
+        const parsed = parseLogLine(
+            '2026-05-27 23:07:56.548 - info: javascript.0 (526) script.js.common._test: start JavaScript (Javascript/js)',
+        );
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 23:07:56.548',
+            level: 'info',
+            source: 'javascript.0',
+            message: 'script.js.common._test: start JavaScript (Javascript/js)',
+            raw: '2026-05-27 23:07:56.548 - info: javascript.0 (526) script.js.common._test: start JavaScript (Javascript/js)',
+            rawPlain:
+                '2026-05-27 23:07:56.548 - info: javascript.0 (526) script.js.common._test: start JavaScript (Javascript/js)',
+        });
+    });
+
+    it('should parse real ioBroker line with ANSI level and keep raw', () => {
+        const ansiLine =
+            '2026-05-27 23:16:13.426 - \u001b[32minfo\u001b[39m: javascript.0 (526) script.js.common._test: start JavaScript';
+        const parsed = parseLogLine(ansiLine);
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 23:16:13.426',
+            level: 'info',
+            source: 'javascript.0',
+            message: 'script.js.common._test: start JavaScript',
+            raw: ansiLine,
+            rawPlain:
+                '2026-05-27 23:16:13.426 - info: javascript.0 (526) script.js.common._test: start JavaScript',
+        });
+    });
+
+    it('should parse line with leading whitespace', () => {
+        const parsed = parseLogLine('\t 2026-05-27 10:11:12.123 - debug: host.adapter Leading whitespace');
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 10:11:12.123',
+            level: 'debug',
+            source: 'host.adapter',
+            message: 'Leading whitespace',
+            raw: '2026-05-27 10:11:12.123 - debug: host.adapter Leading whitespace',
+            rawPlain: '2026-05-27 10:11:12.123 - debug: host.adapter Leading whitespace',
+        });
+    });
+
+    it('should parse line without process id', () => {
+        const parsed = parseLogLine('2026-05-27 10:11:12.123 - info: host.adapter message without pid');
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 10:11:12.123',
+            level: 'info',
+            source: 'host.adapter',
+            message: 'message without pid',
+            raw: '2026-05-27 10:11:12.123 - info: host.adapter message without pid',
+            rawPlain: '2026-05-27 10:11:12.123 - info: host.adapter message without pid',
+        });
+    });
+
+    it('should normalize uppercase level to lowercase', () => {
+        const parsed = parseLogLine('2026-05-27 10:11:12.123 - WARN: host.adapter uppercase level');
+        expect(parsed).to.deep.equal({
+            ts: '2026-05-27 10:11:12.123',
+            level: 'warn',
+            source: 'host.adapter',
+            message: 'uppercase level',
+            raw: '2026-05-27 10:11:12.123 - WARN: host.adapter uppercase level',
+            rawPlain: '2026-05-27 10:11:12.123 - WARN: host.adapter uppercase level',
+        });
+    });
+
+    it('should filter case-insensitive search text, time and level', async () => {
+        const recent = toLogTs(new Date(fixedNow.getTime() - 30 * 60 * 1000));
+        const old = toLogTs(new Date(fixedNow.getTime() - 8 * 60 * 60 * 1000));
+        const content = [
+            `${recent} - info: host.a Adapter Started`,
+            `${recent} - error: host.a Critical failure`,
+            `${old} - error: host.a Too old`,
+        ].join('\n');
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), content, 'utf8');
+
+        const result = await run({ hours: 6, level: 'error', searchText: 'CRITICAL', now: fixedNowIso });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('Critical failure');
+    });
+
+    it('should match searchText in ANSI log lines', async () => {
+        const recent = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const ansiLine = `${recent} - \u001b[32minfo\u001b[39m: javascript.0 (526) script.js.common._test: start JavaScript`;
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), ansiLine, 'utf8');
+
+        const result = await run({ hours: 6, searchText: 'script.js.common._test', now: fixedNowIso });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].level).to.equal('info');
+    });
+
+    it('should set truncated only when more than maxRows exist', async () => {
+        const ts = toLogTs(fixedNow);
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.current.log'),
+            [`${ts} - info: host.a row 1`, `${ts} - info: host.a row 2`, `${ts} - info: host.a row 3`].join('\n'),
+            'utf8',
+        );
+
+        const exact = await run({ maxRows: 3, now: fixedNow });
+        expect(exact.rows).to.have.length(3);
+        expect(exact.truncated).to.equal(false);
+
+        const truncated = await run({ maxRows: 2, now: fixedNow.getTime() });
+        expect(truncated.rows).to.have.length(2);
+        expect(truncated.total).to.equal(2);
+        expect(truncated.truncated).to.equal(true);
+    });
+
+    it('should return duplicate physical log lines with distinct row ids', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const duplicateLine = `${ts} - info: host.a duplicate payload`;
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), [duplicateLine, duplicateLine].join('\n'), 'utf8');
+
+        const result = await run({ searchText: 'duplicate payload', now: fixedNow });
+        expect(result.rows).to.have.length(2);
+        expect(result.rows.map(row => row.message)).to.deep.equal(['duplicate payload', 'duplicate payload']);
+        expect(result.rows.map(row => row.rowId)).to.deep.equal([
+            'iobroker.current.log:1',
+            'iobroker.current.log:2',
+        ]);
+    });
+
+    it('should keep gzip effective for normal searches even when includeGzip is false', async () => {
+        const ts = toLogTs(fixedNow);
+        const gzBuffer = zlib.gzipSync(Buffer.from(`${ts} - debug: host.b from gzip`, 'utf8'));
+        await fs.writeFile(path.join(tempDir, 'iobroker.2026-05-27.log.gz'), gzBuffer);
+
+        const result = await run({ includeGzip: false, level: 'debug', now: fixedNow });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('from gzip');
+    });
+
+    it('should stream a normal text log and return a cursor', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.current.log'),
+            `${ts} - info: host.a streamed text hit`,
+            'utf8',
+        );
+
+        const result = await run({ searchText: 'streamed text', now: fixedNow });
+        const stats = await fs.stat(path.join(tempDir, 'iobroker.current.log'));
+
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('streamed text hit');
+        expect(result.rows[0].rowId).to.equal('iobroker.current.log:1');
+        expect(result.cursor).to.include({
+            file: 'iobroker.current.log',
+            byteOffset: stats.size,
+            lineNumber: 1,
+            size: stats.size,
+        });
+        expect(result.cursor!.mtimeMs).to.equal(stats.mtimeMs);
+    });
+
+    it('should stream a gzip log and find matches', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const gzBuffer = zlib.gzipSync(Buffer.from(`${ts} - warn: host.gz streamed gzip hit`, 'utf8'));
+        await fs.writeFile(path.join(tempDir, 'iobroker.2026-05-27.log.gz'), gzBuffer);
+
+        const result = await run({ level: 'warn', searchText: 'gzip hit', now: fixedNow });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('streamed gzip hit');
+    });
+
+    it('should read only new active log lines from cursor byteOffset', async () => {
+        const firstTs = toLogTs(new Date(fixedNow.getTime() - 10 * 60 * 1000));
+        const secondTs = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const filePath = path.join(tempDir, 'iobroker.current.log');
+        await fs.writeFile(filePath, `${firstTs} - info: host.a first line\n`, 'utf8');
+        const initialStats = await fs.stat(filePath);
+        await fs.appendFile(filePath, `${secondTs} - info: host.a second line\n`, 'utf8');
+
+        const result = await run({
+            activeOnly: true,
+            cursor: {
+                file: 'iobroker.current.log',
+                byteOffset: initialStats.size,
+                lineNumber: 1,
+                size: initialStats.size,
+                mtimeMs: initialStats.mtimeMs,
+            },
+            now: fixedNow,
+        });
+        const endStats = await fs.stat(filePath);
+
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('second line');
+        expect(result.rows[0].rowId).to.equal('iobroker.current.log:2');
+        expect(result.cursor!.byteOffset).to.equal(endStats.size);
+        expect(result.cursor!.lineNumber).to.equal(2);
+    });
+
+    it('should continue row ids from a normal search cursor during activeOnly updates', async () => {
+        const firstTs = toLogTs(new Date(fixedNow.getTime() - 10 * 60 * 1000));
+        const secondTs = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const thirdTs = toLogTs(new Date(fixedNow.getTime() - 1 * 60 * 1000));
+        const filePath = path.join(tempDir, 'iobroker.current.log');
+        await fs.writeFile(
+            filePath,
+            `${[
+                `${firstTs} - info: host.a first line`,
+                '',
+                `${secondTs} - debug: host.a second line`,
+            ].join('\n')}\n`,
+            'utf8',
+        );
+
+        const initialResult = await run({ now: fixedNow });
+        expect(initialResult.cursor!.lineNumber).to.equal(3);
+
+        await fs.appendFile(filePath, `${thirdTs} - info: host.a third line\n`, 'utf8');
+        const updateResult = await run({ activeOnly: true, cursor: initialResult.cursor!, now: fixedNow });
+
+        expect(updateResult.rows).to.have.length(1);
+        expect(updateResult.rows[0].message).to.equal('third line');
+        expect(updateResult.rows[0].rowId).to.equal('iobroker.current.log:4');
+        expect(updateResult.cursor!.lineNumber).to.equal(4);
+    });
+
+    it('should keep activeOnly cursor at the pre-read snapshot when the active log grows during reading', async () => {
+        const firstTs = toLogTs(new Date(fixedNow.getTime() - 10 * 60 * 1000));
+        const secondTs = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const thirdTs = toLogTs(new Date(fixedNow.getTime() - 1 * 60 * 1000));
+        const filePath = path.join(tempDir, 'iobroker.current.log');
+        await fs.writeFile(filePath, `${firstTs} - info: host.a already read\n`, 'utf8');
+        const initialStats = await fs.stat(filePath);
+        await fs.appendFile(filePath, `${secondTs} - info: host.a snapshot line\n`, 'utf8');
+        const snapshotStats = await fs.stat(filePath);
+
+        const originalCreateReadStream = fsSync.createReadStream;
+        let appendedDuringRead = false;
+        fsSync.createReadStream = function patchedCreateReadStream(this: any, readPath: any, options?: any): any {
+            if (!appendedDuringRead && readPath === filePath) {
+                appendedDuringRead = true;
+                fsSync.appendFileSync(filePath, `${thirdTs} - info: host.a appended after snapshot\n`, 'utf8');
+            }
+            return originalCreateReadStream.call(this, readPath, options);
+        } as typeof fsSync.createReadStream;
+
+        let firstResult: SearchResult;
+        try {
+            firstResult = await run({
+                activeOnly: true,
+                searchText: 'line',
+                cursor: {
+                    file: 'iobroker.current.log',
+                    byteOffset: initialStats.size,
+                    lineNumber: 1,
+                    size: initialStats.size,
+                    mtimeMs: initialStats.mtimeMs,
+                },
+                now: fixedNow,
+            });
+        } finally {
+            fsSync.createReadStream = originalCreateReadStream;
+        }
+
+        expect(appendedDuringRead).to.equal(true);
+        expect(firstResult.rows).to.have.length(1);
+        expect(firstResult.rows[0].message).to.equal('snapshot line');
+        expect(firstResult.rows[0].rowId).to.equal('iobroker.current.log:2');
+        expect(firstResult.cursor!.byteOffset).to.equal(snapshotStats.size);
+        expect(firstResult.cursor!.lineNumber).to.equal(2);
+
+        const secondResult = await run({
+            activeOnly: true,
+            searchText: 'appended after snapshot',
+            cursor: firstResult.cursor!,
+            now: fixedNow,
+        });
+
+        expect(secondResult.rows).to.have.length(1);
+        expect(secondResult.rows[0].message).to.equal('appended after snapshot');
+        expect(secondResult.rows[0].rowId).to.equal('iobroker.current.log:3');
+    });
+
+    it('should keep normal search cursor at the active log snapshot when the file grows during reading', async () => {
+        const firstTs = toLogTs(new Date(fixedNow.getTime() - 10 * 60 * 1000));
+        const secondTs = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const thirdTs = toLogTs(new Date(fixedNow.getTime() - 1 * 60 * 1000));
+        const filePath = path.join(tempDir, 'iobroker.current.log');
+        await fs.writeFile(
+            filePath,
+            `${[
+                `${firstTs} - info: host.a first normal line`,
+                `${secondTs} - info: host.a second normal line`,
+            ].join('\n')}\n`,
+            'utf8',
+        );
+        const snapshotStats = await fs.stat(filePath);
+
+        const originalCreateReadStream = fsSync.createReadStream;
+        let appendedDuringRead = false;
+        fsSync.createReadStream = function patchedCreateReadStream(this: any, readPath: any, options?: any): any {
+            if (!appendedDuringRead && readPath === filePath) {
+                appendedDuringRead = true;
+                fsSync.appendFileSync(filePath, `${thirdTs} - info: host.a appended normal line\n`, 'utf8');
+            }
+            return originalCreateReadStream.call(this, readPath, options);
+        } as typeof fsSync.createReadStream;
+
+        let initialResult: SearchResult;
+        try {
+            initialResult = await run({ searchText: 'normal line', now: fixedNow });
+        } finally {
+            fsSync.createReadStream = originalCreateReadStream;
+        }
+
+        expect(appendedDuringRead).to.equal(true);
+        expect(initialResult.rows.map(row => row.message)).to.deep.equal([
+            'second normal line',
+            'first normal line',
+        ]);
+        expect(initialResult.cursor!.byteOffset).to.equal(snapshotStats.size);
+        expect(initialResult.cursor!.lineNumber).to.equal(2);
+
+        const updateResult = await run({
+            activeOnly: true,
+            searchText: 'appended normal line',
+            cursor: initialResult.cursor!,
+            now: fixedNow,
+        });
+
+        expect(updateResult.rows).to.have.length(1);
+        expect(updateResult.rows[0].message).to.equal('appended normal line');
+        expect(updateResult.rows[0].rowId).to.equal('iobroker.current.log:3');
+    });
+
+    it('should not read activeOnly lines when cursor byteOffset is at current file size', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const filePath = path.join(tempDir, 'iobroker.current.log');
+        await fs.writeFile(filePath, `${ts} - info: host.a already read\n`, 'utf8');
+        const stats = await fs.stat(filePath);
+
+        const result = await run({
+            activeOnly: true,
+            cursor: {
+                file: 'iobroker.current.log',
+                byteOffset: stats.size,
+                lineNumber: 'invalid' as any,
+                size: stats.size,
+                mtimeMs: stats.mtimeMs,
+            },
+            now: fixedNow,
+        });
+
+        expect(result.rows).to.have.length(0);
+        expect(result.cursor!.byteOffset).to.equal(stats.size);
+    });
+
+    it('should restart activeOnly from beginning after rotation or truncation', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), `${ts} - error: host.a after rotation`, 'utf8');
+
+        const result = await run({
+            activeOnly: true,
+            cursor: { file: 'iobroker.current.log', byteOffset: 9999, lineNumber: 20, size: 9999, mtimeMs: 1 },
+            now: fixedNow,
+        });
+
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('after rotation');
+        expect(result.cursor!.lineNumber).to.equal(1);
+    });
+
+    it('should not use gzip files for activeOnly searches', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+        const gzBuffer = zlib.gzipSync(Buffer.from(`${ts} - info: host.gz archived`, 'utf8'));
+        await fs.writeFile(path.join(tempDir, 'iobroker.2026-05-27.log.gz'), gzBuffer);
+
+        const result = await run({ activeOnly: true, searchText: 'archived', now: fixedNow });
+
+        expect(result.rows).to.have.length(0);
+        expect(result.cursor).to.equal(null);
+    });
+
+    it('should prefer current log before dated logs', async () => {
+        const currentTs = toLogTs(new Date(fixedNow.getTime() - 10 * 1000));
+        const datedTs = toLogTs(new Date(fixedNow.getTime() - 30 * 1000));
+        await fs.writeFile(path.join(tempDir, 'iobroker.2026-05-27.log'), `${datedTs} - info: host.a from dated`, 'utf8');
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.current.log'),
+            `${currentTs} - info: host.a from current`,
+            'utf8',
+        );
+
+        const result = await run({ maxRows: 1, now: fixedNow });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].message).to.equal('from current');
+    });
+
+    it('should process newer dated files before older dated files', async () => {
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.2026-05-25.log'),
+            '2026-05-25 01:00:00.000 - info: host.a old file',
+            'utf8',
+        );
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.2026-05-26.log'),
+            '2026-05-26 01:00:00.000 - info: host.a newer file',
+            'utf8',
+        );
+
+        const result = await run({ hours: 72, maxRows: 1, now: fixedNow });
+        expect(result.rows[0].message).to.equal('newer file');
+    });
+
+    it('should stop reading older normal search files once maxRows plus one matches are found', async () => {
+        const newestLines = [
+            '2026-05-27 11:59:00.000 - info: host.a newest 1',
+            '2026-05-27 11:58:00.000 - info: host.a newest 2',
+            '2026-05-27 11:57:00.000 - info: host.a newest 3',
+        ].join('\n');
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), newestLines, 'utf8');
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.2026-05-26.log'),
+            '2026-05-26 11:00:00.000 - info: host.a older hit',
+            'utf8',
+        );
+
+        const debugMessages: string[] = [];
+        const result = await run({
+            hours: 48,
+            maxRows: 2,
+            now: fixedNow,
+            debugLog: message => debugMessages.push(message),
+        });
+
+        expect(result.rows.map(row => row.message)).to.deep.equal(['newest 1', 'newest 2']);
+        expect(result.truncated).to.equal(true);
+        expect(
+            debugMessages.some(message => message.startsWith('Log search file: name=iobroker.2026-05-26.log')),
+        ).to.equal(false);
+        const doneMessage = debugMessages.find(message => message.startsWith('Log search done:'));
+        expect(doneMessage).to.include('files_read=1');
+        expect(doneMessage).to.include('lines_read=3');
+        expect(doneMessage).to.include('returned=2');
+        expect(doneMessage).to.include('truncated=true');
+        expect(doneMessage).to.include('stop_reason=max_rows');
+    });
+
+    it('should continue reading older normal search files until maxRows plus one matches are found', async () => {
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.current.log'),
+            '2026-05-27 11:59:00.000 - info: host.a newest only',
+            'utf8',
+        );
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.2026-05-26.log'),
+            '2026-05-26 11:00:00.000 - info: host.a older processed',
+            'utf8',
+        );
+
+        const debugMessages: string[] = [];
+        const result = await run({
+            hours: 48,
+            maxRows: 2,
+            now: fixedNow,
+            debugLog: message => debugMessages.push(message),
+        });
+
+        expect(result.rows.map(row => row.message)).to.deep.equal(['newest only', 'older processed']);
+        expect(result.truncated).to.equal(false);
+        expect(
+            debugMessages.some(message => message.startsWith('Log search file: name=iobroker.2026-05-26.log')),
+        ).to.equal(true);
+        const doneMessage = debugMessages.find(message => message.startsWith('Log search done:'));
+        expect(doneMessage).to.include('files_read=2');
+        expect(doneMessage).to.include('lines_read=2');
+        expect(doneMessage).to.include('returned=2');
+        expect(doneMessage).to.include('truncated=false');
+        expect(doneMessage).to.include('stop_reason=eof');
+    });
+
+    it('should skip dated files outside the time window', async () => {
+        await fs.writeFile(
+            path.join(tempDir, 'iobroker.2026-05-17.log'),
+            '2026-05-17 10:00:00.000 - info: host.a too old',
+            'utf8',
+        );
+
+        const result = await run({ hours: 6, now: fixedNow });
+        expect(result.rows).to.have.length(0);
+    });
+
+    it('should fallback to all for invalid level and clamp low hours', async () => {
+        const ts = toLogTs(new Date(fixedNow.getTime() - 20 * 60 * 1000));
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), `${ts} - warn: host.a warning line`, 'utf8');
+
+        const result = await run({ level: '' as any, hours: 0, now: fixedNow });
+        expect(result.rows).to.have.length(1);
+        expect(result.rows[0].level).to.equal('warn');
+    });
+
+    it('should not crash on invalid now and fallback to current time', async () => {
+        const ts = toLogTs(new Date(Date.now() - 5 * 60 * 1000));
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), `${ts} - info: host.a fallback now`, 'utf8');
+
+        const result = await run({ hours: 1, now: 'not-a-date' });
+        expect(result.rows.length).to.be.greaterThan(0);
+    });
+
+    it('should report an error for an unreadable directory', async () => {
+        const result = await searchLogs({ location: makeLocation(path.join(tempDir, 'does-not-exist')) });
+        expect(result.ok).to.equal(false);
+        expect((result as { error: string }).error).to.match(/^Cannot read log directory/);
+    });
+
+    it('should call debugLog with compact diagnostics', async () => {
+        const recent = toLogTs(new Date(fixedNow.getTime() - 10 * 60 * 1000));
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), `${recent} - info: host.a debug check`, 'utf8');
+
+        const debugMessages: string[] = [];
+        await run({ now: fixedNow, debugLog: message => debugMessages.push(message) });
+
+        expect(debugMessages.some(message => message.startsWith('Log search start:'))).to.equal(true);
+        expect(debugMessages.some(message => message.startsWith('Log search files:'))).to.equal(true);
+        expect(debugMessages.some(message => message.startsWith('Log search file:'))).to.equal(true);
+        expect(debugMessages.some(message => message.startsWith('Log search done:'))).to.equal(true);
+    });
+
+    it('should limit unparsed sample debug lines to three entries', async () => {
+        const invalidLines = [
+            'broken line one',
+            'broken line two',
+            'broken line three',
+            'broken line four',
+            'broken line five',
+        ].join('\n');
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), invalidLines, 'utf8');
+
+        const debugMessages: string[] = [];
+        await run({ now: fixedNow, debugLog: message => debugMessages.push(message) });
+
+        const sampleMessages = debugMessages.filter(message => message.startsWith('Log search sample unparsed:'));
+        expect(sampleMessages).to.have.length(3);
+        expect(sampleMessages[0]).to.match(/len=\d+, line="/);
+    });
+
+    it('should ignore empty lines for rejected format and unparsed samples', async () => {
+        const content = ['', '   ', '\t', 'broken line', ''].join('\n');
+        await fs.writeFile(path.join(tempDir, 'iobroker.current.log'), content, 'utf8');
+
+        const debugMessages: string[] = [];
+        await run({ now: fixedNow, debugLog: message => debugMessages.push(message) });
+
+        const fileMessage = debugMessages.find(message => message.startsWith('Log search file:'));
+        expect(fileMessage).to.include('rejected_format=1');
+        const sampleMessages = debugMessages.filter(message => message.startsWith('Log search sample unparsed:'));
+        expect(sampleMessages).to.have.length(1);
+    });
+
+    describe('custom file naming', () => {
+        it('should honour a custom prefix and extension', async () => {
+            const location = makeLocation(tempDir, 'mylog', '.txt');
+            const ts = toLogTs(new Date(fixedNow.getTime() - 5 * 60 * 1000));
+            // the rotated files use the configured extension, the symlink is always ".current.log"
+            await fs.writeFile(path.join(tempDir, 'mylog.current.log'), `${ts} - info: host.a custom active`, 'utf8');
+            await fs.writeFile(
+                path.join(tempDir, 'mylog.2026-05-26.txt'),
+                '2026-05-26 11:00:00.000 - info: host.a custom rotated',
+                'utf8',
+            );
+            // must be ignored: default naming
+            await fs.writeFile(
+                path.join(tempDir, 'iobroker.2026-05-26.log'),
+                '2026-05-26 11:00:00.000 - info: host.a default rotated',
+                'utf8',
+            );
+
+            const result = await run({ location, hours: 48, now: fixedNow });
+            expect(result.rows.map(row => row.message)).to.deep.equal(['custom active', 'custom rotated']);
+            expect(result.cursor!.file).to.equal('mylog.current.log');
+        });
+
+        it('should handle a filename that already ends with .log', async () => {
+            const location = makeLocation(tempDir, 'iobroker.log', '');
+            await fs.writeFile(
+                path.join(tempDir, 'iobroker.log.2026-05-26'),
+                '2026-05-26 11:00:00.000 - info: host.a dated without extension',
+                'utf8',
+            );
+
+            const result = await run({ location, hours: 48, now: fixedNow });
+            expect(result.rows.map(row => row.message)).to.deep.equal(['dated without extension']);
+        });
+    });
+});

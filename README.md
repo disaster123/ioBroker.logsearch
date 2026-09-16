@@ -8,7 +8,8 @@ Search ioBroker log files directly in the Admin interface by time range, level, 
 
 ## Features
 
-- Searches the active ioBroker log and rotated `iobroker.YYYY-MM-DD.log` files.
+- Detects the log directory and the log file naming from the js-controller configuration.
+- Searches the active ioBroker log and the rotated `<name>.YYYY-MM-DD.log` files.
 - Transparently reads gzip-compressed historical logs.
 - Filters by a case-insensitive text fragment and the levels `error`, `warn`, `info`, `debug`, or `silly`.
 - Limits the result count and clearly indicates truncated results.
@@ -36,11 +37,30 @@ Once included, select **Log Search** in ioBroker Admin's adapter catalog and add
 
 | Setting | Default | Description |
 |---|---:|---|
-| Log directory | `/opt/iobroker/log` | Directory containing the ioBroker log files. |
+| Log directory | *(empty)* | Directory containing the ioBroker log files. Leave empty for automatic detection. |
 | Default hours | `72` | Initial time range used by the Log Search tab. |
 | Default max rows | `500` | Initial maximum number of rows returned. |
 
 The adapter enforces an absolute maximum of 5,000 rows per request. The configured log directory is used server-side; a client cannot override it in a search request.
+
+### Automatic log directory detection
+
+With an empty **Log directory** the adapter reads `iobroker.json` and evaluates the first enabled `log.transport`
+of type `file`, the same way js-controller does:
+
+- `filename` defaults to `log/iobroker`. Its directory part is resolved like the `getLogFiles` host command of
+  js-controller does it: walking up from the controller directory (`../../..`, `../..`, `..`, `.`) and taking the
+  first existing directory - preferring one that already holds matching log files. If none exists yet, the `isNpm`
+  rule of js-controller's `logger.ts` decides, so the reported path is the one the controller will create.
+- An absolute `filename` (`/var/log/iobroker/iob` as well as `D:\logs\iobroker`) is used unchanged.
+- `fileext` determines the extension of the rotated files; the symlink of the active log is always
+  `<name>.current.log`.
+- `IOBROKER_DATA_DIR` is honoured when looking for `iobroker.json`.
+
+If no configuration can be read at all, the adapter probes the same walk-up candidates for `log/`, plus the sibling
+of the data directory and `/opt/iobroker/log`. The detected directory is logged on start-up and shown on the
+configuration page. The obsolete default `/opt/iobroker/log` that earlier versions wrote into every instance is
+ignored when it does not exist, so existing instances also profit from the detection.
 
 ## Usage
 
@@ -57,23 +77,39 @@ Results are ordered newest first and show timestamp, level, source, and message.
 
 ## Development
 
+The adapter itself is TypeScript in `src/` and compiles to `build/`. The Admin GUI is a separate npm project in
+`src-admin/`, built with [Vite](https://vite.dev/) and [`@iobroker/gui-components`](https://github.com/ioBroker/adapter-react-v5);
+`npm run build` writes it to `admin/`.
+
 ```bash
-npm ci
-npm run lint
-npm run check
-npm test
-npm run build
+npm ci            # adapter dependencies
+npm run npm       # dependencies of the adapter and of src-admin
+npm run lint      # eslint for src/ (npm run lint-frontend for src-admin/)
+npm run check     # tsc for src/ and test/
+npm test          # unit tests and package validation
+npm run build     # build/ (tsc) and admin/ (vite)
 ```
 
-CI runs linting and JavaScript type checking on Node.js 24, then executes adapter tests on Node.js 22, 24, and 26 across Linux, Windows, and macOS.
+For GUI work, start the Vite dev server and point it at a running Admin instance on port 8081:
+
+```bash
+cd src-admin
+npm start
+```
+
+Then open `http://localhost:3000/?instance=0` for the configuration dialog or
+`http://localhost:3000/?instance=0&tab=true` for the Log Search tab.
+
+CI lints and type-checks the adapter and the GUI on Node.js 24, builds both from a clean checkout, and then executes
+adapter tests on Node.js 22, 24, and 26 across Linux, Windows, and macOS.
 
 ### Preparing a release
 
-Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Feature pull requests do not update generated files in `admin/build`.
+Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Feature pull requests do not update the generated files in `build/` and `admin/`.
 
-Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the Admin interface for every pull request. After all checks for a push to `main` pass, CI commits the generated `admin/build` files to `main` so installations directly from GitHub include the Admin interface. Dependency updates only commit the updated package lock; the subsequent test workflow publishes the matching Admin build.
+Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the adapter and the Admin interface for every pull request. After all checks for a push to `main` pass, CI commits the generated `build/` and `admin/` files to `main` so installations directly from GitHub include the compiled adapter and the Admin interface. Dependency updates only commit the updated package lock; the subsequent test workflow publishes the matching Admin build.
 
-Wait for the generated Admin-build commit, then create an annotated `v<version>` tag on the resulting `main` HEAD and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job builds the Admin interface immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
+Wait for the generated build commit, then create an annotated `v<version>` tag on the resulting `main` HEAD and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job builds the adapter and the Admin interface immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
 
 ## Changelog
 
@@ -81,6 +117,12 @@ Wait for the generated Admin-build commit, then create an annotated `v<version>`
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+
+- (@GermanBluefox) Detect the log directory and the log file naming from the js-controller configuration; an empty **Log directory** now means automatic detection.
+- (@GermanBluefox) Migrate the adapter and the Admin GUI to TypeScript.
+- (@GermanBluefox) Build the Admin GUI with Vite and `@iobroker/gui-components` (React 19, MUI 9).
 
 ### 0.0.3 (2026-09-16)
 

@@ -1,0 +1,19 @@
+@import '@iobroker/gui-components/index.css';
+
+* {
+    box-sizing: border-box;
+}
+
+/* the admin tab and the config dialog both fill the whole iframe */
+html,
+body,
+#root,
+.App {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}

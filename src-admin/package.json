@@ -1,0 +1,35 @@
+{
+    "name": "iobroker.logsearch",
+    "version": "0.0.3",
+    "private": true,
+    "dependencies": {
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.14.1",
+        "@iobroker/gui-components": "^10.3.1",
+        "@mui/icons-material": "^9.4.0",
+        "@mui/material": "^9.4.0",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^6.1.1",
+        "react": "^19.3.0",
+        "react-dom": "^19.3.0",
+        "typescript": "~6.0.3",
+        "vite": "^8.3.0"
+    },
+    "devDependencies": {
+        "@iobroker/eslint-config": "^2.3.4"
+    },
+    "scripts": {
+        "start": "vite --host",
+        "build": "vite build",
+        "lint": "eslint -c eslint.config.mjs",
+        "tsc": "tsc --noEmit -p tsconfig.json"
+    },
+    "homepage": ".",
+    "browserslist": [
+        ">0.2%",
+        "not dead",
+        "not ie <= 11",
+        "not op_mini all"
+    ]
+}
