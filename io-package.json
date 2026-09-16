@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "0.0.2",
+        "version": "0.0.3",
         "news": {
+            "0.0.3": {
+                "en": "Add a toggleable new-log view and export displayed log lines as a text file.",
+                "de": "Umschaltbare Ansicht für neue Logeinträge und Export der angezeigten Logzeilen als Textdatei hinzugefügt.",
+                "ru": "Добавлены переключаемый режим просмотра новых записей журнала и экспорт отображаемых строк журнала в текстовый файл.",
+                "pt": "Adicionados um modo alternável para exibir novas entradas de log e a exportação das linhas exibidas como arquivo de texto.",
+                "nl": "Een schakelbare weergave voor nieuwe logregels en export van de weergegeven logregels als tekstbestand toegevoegd.",
+                "fr": "Ajout d’un mode commutable pour les nouvelles entrées du journal et de l’exportation des lignes affichées dans un fichier texte.",
+                "it": "Aggiunta una vista attivabile per le nuove voci di registro e l’esportazione delle righe visualizzate in un file di testo.",
+                "es": "Se añadió una vista conmutable para las nuevas entradas del registro y la exportación de las líneas mostradas como archivo de texto.",
+                "pl": "Dodano przełączany widok nowych wpisów dziennika oraz eksport wyświetlanych wierszy do pliku tekstowego.",
+                "uk": "Додано перемиканий режим перегляду нових записів журналу та експорт відображених рядків журналу в текстовий файл.",
+                "zh-cn": "添加可切换的新日志视图，并支持将显示的日志行导出为文本文件。"
+            },
             "0.0.2": {
                 "en": "Update documentation for the npm publication and prepare automated releases.",
                 "de": "Dokumentation zur npm-Veröffentlichung aktualisiert und automatische Releases vorbereitet.",

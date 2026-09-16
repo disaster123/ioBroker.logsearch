@@ -82,7 +82,7 @@ Wait for the generated Admin-build commit, then create an annotated `v<version>`
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.0.3 (2026-09-16)
 
 - (@disaster123) Add a toggleable From now button to hide old log entries.
 - (@disaster123) Export the displayed log rows as a text file.
