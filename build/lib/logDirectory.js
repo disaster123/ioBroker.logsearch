@@ -59,16 +59,14 @@ function resolveControllerDir() {
     }
 }
 /**
- * Candidate locations of `iobroker.json`, mirroring `tools.getConfigFileName()` of js-controller.
+ * Candidate locations of `iobroker.json`, preferring the data directory resolved by js-controller.
  *
  * @param controllerDir Root directory of js-controller.
- * @param env Environment to read `IOBROKER_DATA_DIR` from.
+ * @param dataDir Absolute data directory provided by adapter-core, including custom controller paths.
  */
-function getConfigFileCandidates(controllerDir, env) {
+function getConfigFileCandidates(controllerDir, dataDir) {
     const candidates = [];
-    const envDataDir = env.IOBROKER_DATA_DIR;
-    if (envDataDir) {
-        const dataDir = /^\w:[/\\]|^[/\\]/.test(envDataDir) ? envDataDir : (0, node_path_1.join)(controllerDir, envDataDir);
+    if (dataDir) {
         candidates.push((0, node_path_1.join)(dataDir, 'iobroker.json'));
     }
     if (controllerDir) {
@@ -175,7 +173,6 @@ function detectLogLocation(options = {}) {
     const exists = options.exists || ((path) => (0, node_fs_1.existsSync)(path));
     const readFile = options.readFile || ((path) => (0, node_fs_1.readFileSync)(path, 'utf8'));
     const readDir = options.readDir || ((path) => (0, node_fs_1.readdirSync)(path));
-    const env = options.env || process.env;
     const controllerDir = options.controllerDir === undefined ? resolveControllerDir() : options.controllerDir;
     const probe = (directory, naming) => {
         if (!exists(directory)) {
@@ -189,7 +186,7 @@ function detectLogLocation(options = {}) {
         }
     };
     let fromConfig = null;
-    for (const candidate of getConfigFileCandidates(controllerDir, env)) {
+    for (const candidate of getConfigFileCandidates(controllerDir, options.dataDir)) {
         if (!exists(candidate)) {
             continue;
         }
