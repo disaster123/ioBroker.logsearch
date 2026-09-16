@@ -122,6 +122,10 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     ### **WORK IN PROGRESS**
 -->
 
+### **WORK IN PROGRESS**
+
+- (@disaster123) Use the test dependencies provided by `@iobroker/testing` instead of declaring them twice.
+
 ### 0.0.4 (2026-09-16)
 
 - (@GermanBluefox) Detect the log directory and the log file naming from the js-controller configuration; an empty **Log directory** now means automatic detection.
