@@ -589,7 +589,8 @@ export class LogSearchTab extends React.Component {
         this.runSearch();
     }
 
-    onNewLogs(onlyNew) {
+    onToggleNewLogs() {
+        const onlyNew = !this.state.onlyNew;
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
         this.invalidateSearchRequest();
@@ -729,22 +730,18 @@ export class LogSearchTab extends React.Component {
                                 Clear filter
                             </Button>
                             <Button
-                                variant="outlined"
-                                onClick={() => this.onNewLogs(true)}
+                                variant={this.state.onlyNew ? 'contained' : 'outlined'}
+                                onClick={() => this.onToggleNewLogs()}
                                 size="small"
-                                title="Clear the table and show only new log entries. Log files are kept."
+                                aria-pressed={this.state.onlyNew}
+                                title={
+                                    this.state.onlyNew
+                                        ? 'Show log history again.'
+                                        : 'Clear the table and show only new log entries. Log files are kept.'
+                                }
                             >
                                 From now
                             </Button>
-                            {this.state.onlyNew ? (
-                                <Button
-                                    variant="text"
-                                    onClick={() => this.onNewLogs(false)}
-                                    size="small"
-                                >
-                                    Show history
-                                </Button>
-                            ) : null}
                             <Button
                                 variant="outlined"
                                 disabled={this.state.loading || !this.state.rows.length}
