@@ -83,12 +83,16 @@ The adapter itself is TypeScript in `src/` and compiles to `build/`. The Admin G
 
 ```bash
 npm ci            # adapter dependencies
-npm run npm       # dependencies of the adapter and of src-admin
+npm run 1-npm     # GUI dependencies from src-admin/package-lock.json (npm ci)
 npm run lint      # eslint for src/ (npm run lint-frontend for src-admin/)
 npm run check     # tsc for src/ and test/
 npm test          # unit tests and package validation
 npm run build     # build/ (tsc) and admin/ (vite)
 ```
+
+The full GUI build runs `npm ci` in `src-admin/` even when `node_modules` already exists. It uses the committed
+lockfile without `--force` and stops if dependency installation fails. For repeated GUI builds after installing
+dependencies once, the individual `2-build`, `3-copy`, and `4-patch` tasks remain available.
 
 For GUI work, start the Vite dev server and point it at a running Admin instance on port 8081:
 
