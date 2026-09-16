@@ -29,8 +29,6 @@ export interface DetectLogLocationOptions {
     controllerDir?: string;
     /** Absolute data directory, normally `utils.getAbsoluteDefaultDataDir()`. */
     dataDir?: string;
-    /** Environment to read `IOBROKER_DATA_DIR` from. */
-    env?: Record<string, string | undefined>;
     exists?: (path: string) => boolean;
     readFile?: (path: string) => string;
     readDir?: (path: string) => string[];
@@ -82,16 +80,14 @@ function resolveControllerDir(): string {
 }
 
 /**
- * Candidate locations of `iobroker.json`, mirroring `tools.getConfigFileName()` of js-controller.
+ * Candidate locations of `iobroker.json`, preferring the data directory resolved by js-controller.
  *
  * @param controllerDir Root directory of js-controller.
- * @param env Environment to read `IOBROKER_DATA_DIR` from.
+ * @param dataDir Absolute data directory provided by adapter-core, including custom controller paths.
  */
-export function getConfigFileCandidates(controllerDir: string, env: Record<string, string | undefined>): string[] {
+export function getConfigFileCandidates(controllerDir: string, dataDir?: string): string[] {
     const candidates: string[] = [];
-    const envDataDir = env.IOBROKER_DATA_DIR;
-    if (envDataDir) {
-        const dataDir = /^\w:[/\\]|^[/\\]/.test(envDataDir) ? envDataDir : join(controllerDir, envDataDir);
+    if (dataDir) {
         candidates.push(join(dataDir, 'iobroker.json'));
     }
     if (controllerDir) {
@@ -217,7 +213,6 @@ export function detectLogLocation(options: DetectLogLocationOptions = {}): LogLo
     const exists = options.exists || ((path: string): boolean => existsSync(path));
     const readFile = options.readFile || ((path: string): string => readFileSync(path, 'utf8'));
     const readDir = options.readDir || ((path: string): string[] => readdirSync(path));
-    const env = options.env || process.env;
     const controllerDir = options.controllerDir === undefined ? resolveControllerDir() : options.controllerDir;
 
     const probe = (directory: string, naming: Pick<LogLocation, 'prefix' | 'extension'>): 'files' | 'exists' | 'no' => {
@@ -232,7 +227,7 @@ export function detectLogLocation(options: DetectLogLocationOptions = {}): LogLo
     };
 
     let fromConfig: Omit<LogLocation, 'source'> | null = null;
-    for (const candidate of getConfigFileCandidates(controllerDir, env)) {
+    for (const candidate of getConfigFileCandidates(controllerDir, options.dataDir)) {
         if (!exists(candidate)) {
             continue;
         }

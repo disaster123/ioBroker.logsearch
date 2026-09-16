@@ -55,7 +55,8 @@ of type `file`, the same way js-controller does:
 - An absolute `filename` (`/var/log/iobroker/iob` as well as `D:\logs\iobroker`) is used unchanged.
 - `fileext` determines the extension of the rotated files; the symlink of the active log is always
   `<name>.current.log`.
-- `IOBROKER_DATA_DIR` is honoured when looking for `iobroker.json`.
+- The controller-resolved data directory is checked first for `iobroker.json`. This preserves
+  `IOBROKER_DATA_DIR` support through adapter-core without accessing the process environment in the adapter.
 
 If no usable file transport can be read, the adapter probes walk-up candidates for `log/`, plus the sibling
 of the data directory and `/opt/iobroker/log`. The detected directory is logged on start-up and shown on the
@@ -125,6 +126,7 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
 ### **WORK IN PROGRESS**
 
 - (@disaster123) Use the test dependencies provided by `@iobroker/testing` instead of declaring them twice.
+- (@disaster123) Use the controller-resolved data directory for log detection without direct process-environment access.
 
 ### 0.0.4 (2026-09-16)
 

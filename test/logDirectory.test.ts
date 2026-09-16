@@ -60,7 +60,6 @@ describe('logDirectory detection', () => {
     it('resolves the default transport of an npm installation against the installation root', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({ configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() } }),
         });
 
@@ -85,7 +84,6 @@ describe('logDirectory detection', () => {
     it('uses the configured logger directory when another directory has unrelated files', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() },
                 dirs: {
@@ -103,7 +101,6 @@ describe('logDirectory detection', () => {
     it('uses the configured logger directory even when multiple candidates are empty', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() },
                 dirs: { '/opt/log': [], '/opt/iobroker/log': [] },
@@ -123,7 +120,6 @@ describe('logDirectory detection', () => {
             }
             const location = detectLogLocation({
                 controllerDir: NPM_CONTROLLER_DIR,
-                env: {},
                 ...fs({
                     configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() },
                     dirs,
@@ -138,7 +134,6 @@ describe('logDirectory detection', () => {
     it('does not select logs from another installation on Windows', () => {
         const location = detectLogLocation({
             controllerDir: 'C:/iobroker/node_modules/iobroker.js-controller',
-            env: {},
             ...fs({
                 configs: { 'C:/iobroker/iobroker-data/iobroker.json': config() },
                 dirs: {
@@ -155,7 +150,6 @@ describe('logDirectory detection', () => {
     it('uses the logger directory of a development checkout despite logs in its parent', () => {
         const location = detectLogLocation({
             controllerDir: DEV_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: { [`${DEV_CONTROLLER_DIR}/conf/iobroker.json`]: config() },
                 dirs: {
@@ -171,7 +165,6 @@ describe('logDirectory detection', () => {
     it('resolves a relative transport of a development checkout against the controller directory', () => {
         const location = detectLogLocation({
             controllerDir: DEV_CONTROLLER_DIR,
-            env: {},
             ...fs({ configs: { [`${DEV_CONTROLLER_DIR}/conf/iobroker.json`]: config() } }),
         });
 
@@ -182,7 +175,6 @@ describe('logDirectory detection', () => {
     it('keeps an absolute posix filename', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: {
                     '/opt/iobroker/iobroker-data/iobroker.json': config({ filename: '/var/log/iobroker/iob' }),
@@ -198,7 +190,6 @@ describe('logDirectory detection', () => {
     it('keeps an absolute windows filename', () => {
         const location = detectLogLocation({
             controllerDir: 'C:/iobroker/node_modules/iobroker.js-controller',
-            env: {},
             ...fs({
                 configs: {
                     'C:/iobroker/iobroker-data/iobroker.json': config({ filename: 'D:\\logs\\iobroker' }),
@@ -213,7 +204,6 @@ describe('logDirectory detection', () => {
     it('uses a custom filename and file extension', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: {
                     '/opt/iobroker/iobroker-data/iobroker.json': config({ filename: 'logs/mylog', fileext: '.txt' }),
@@ -234,7 +224,6 @@ describe('logDirectory detection', () => {
     it('adds no extension when the filename already ends with .log', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: {
                     '/opt/iobroker/iobroker-data/iobroker.json': config({ filename: 'log/iobroker.log' }),
@@ -248,26 +237,69 @@ describe('logDirectory detection', () => {
         expect(getActiveLogFileName(location)).to.equal('iobroker.log.current.log');
     });
 
-    it('reads the config from IOBROKER_DATA_DIR', () => {
+    it('prefers the custom data directory resolved by the controller', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: { IOBROKER_DATA_DIR: '/mnt/data' },
+            dataDir: '/mnt/data',
             ...fs({
                 configs: {
-                    '/mnt/data/iobroker.json': config({ filename: 'log/fromenv' }),
-                    // must not win over the environment
+                    '/mnt/data/iobroker.json': config({ filename: 'log/fromdata' }),
+                    // must not win over the controller-resolved data directory
                     '/opt/iobroker/iobroker-data/iobroker.json': config({ filename: 'log/fromroot' }),
                 },
             }),
         });
 
-        expect(location.prefix).to.equal('fromenv');
+        expect(location.prefix).to.equal('fromdata');
+    });
+
+    it('uses a custom controller data directory on another Windows drive', () => {
+        const location = detectLogLocation({
+            controllerDir: 'C:/iobroker/node_modules/iobroker.js-controller',
+            dataDir: 'D:/custom-data',
+            ...fs({
+                configs: {
+                    'D:/custom-data/iobroker.json': config({ filename: 'D:/custom-logs/active' }),
+                    'C:/iobroker/iobroker-data/iobroker.json': config({ filename: 'log/stale' }),
+                },
+            }),
+        });
+
+        expect(toPosix(location.directory)).to.equal('D:/custom-logs');
+        expect(location.prefix).to.equal('active');
+        expect(location.source).to.equal('controller-config');
+    });
+
+    it('uses the controller-resolved data directory for development installations', () => {
+        const location = detectLogLocation({
+            controllerDir: DEV_CONTROLLER_DIR,
+            dataDir: '/mnt/development-data',
+            ...fs({
+                configs: {
+                    '/mnt/development-data/iobroker.json': config({ filename: 'log/custom' }),
+                    [`${DEV_CONTROLLER_DIR}/conf/iobroker.json`]: config({ filename: 'log/stale' }),
+                },
+            }),
+        });
+
+        expect(location.directory).to.equal(normalize(`${DEV_CONTROLLER_DIR}/log`));
+        expect(location.prefix).to.equal('custom');
+    });
+
+    it('keeps standard config fallbacks when the supplied data directory has no config', () => {
+        const location = detectLogLocation({
+            controllerDir: NPM_CONTROLLER_DIR,
+            dataDir: '/mnt/missing-data',
+            ...fs({ configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() } }),
+        });
+
+        expect(location.directory).to.equal(normalize('/opt/iobroker/log'));
+        expect(location.source).to.equal('controller-config');
     });
 
     it('skips disabled and non-file transports', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 configs: {
                     '/opt/iobroker/iobroker-data/iobroker.json': {
@@ -290,7 +322,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             configuredDirectory: '  /mnt/logs  ',
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 files: ['/mnt/logs'],
                 configs: { '/opt/iobroker/iobroker-data/iobroker.json': config({ fileext: '.txt' }) },
@@ -307,7 +338,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             configuredDirectory: '/mnt/typo',
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({ configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() } }),
         });
 
@@ -319,7 +349,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             configuredDirectory: '/opt/iobroker/log',
             controllerDir: 'C:/iobroker/node_modules/iobroker.js-controller',
-            env: {},
             ...fs({ configs: { 'C:/iobroker/iobroker-data/iobroker.json': config() } }),
         });
 
@@ -331,7 +360,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             configuredDirectory: '/opt/iobroker/log',
             controllerDir: NPM_CONTROLLER_DIR,
-            env: {},
             ...fs({
                 files: ['/opt/iobroker/log'],
                 configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() },
@@ -345,7 +373,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
             dataDir: '/opt/iobroker/iobroker-data',
-            env: {},
             ...fs({
                 dirs: {
                     // the data-dir sibling exists but holds nothing that looks like a log
@@ -363,7 +390,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
             dataDir: '/opt/iobroker/iobroker-data',
-            env: {},
             ...fs({ dirs: { '/opt/iobroker/log': ['readme.txt'] } }),
         });
 
@@ -375,7 +401,6 @@ describe('logDirectory detection', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
             dataDir: '/opt/iobroker/iobroker-data',
-            env: {},
             ...fs({}),
         });
 
