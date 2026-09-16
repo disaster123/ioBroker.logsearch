@@ -186,7 +186,7 @@ const styles = theme => ({
     errorText: { color: theme.palette.error.main, marginTop: theme.spacing(1.5) },
 });
 
-class LogSearchTab extends React.Component {
+export class LogSearchTab extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
@@ -201,6 +201,8 @@ class LogSearchTab extends React.Component {
             hasSearched: false,
             cursor: null,
             autoUpdateActive: false,
+            onlyNew: false,
+            since: null,
         };
         this.searchDebounceTimer = null;
         this.pendingSearch = false;
@@ -426,6 +428,7 @@ class LogSearchTab extends React.Component {
             maxRows,
             activeOnly: true,
             cursor: this.state.cursor,
+            since: this.state.since,
         };
 
         try {
@@ -518,6 +521,8 @@ class LogSearchTab extends React.Component {
             hours: this.getNumberOrDefault(this.state.hours, 72),
             level: this.state.level,
             maxRows: this.getNumberOrDefault(this.state.maxRows, 500),
+            startNow: this.state.onlyNew && this.state.since === null,
+            since: this.state.since,
         };
 
         this.setState({ loading: true, error: '', hasSearched: true, cursor: null, autoUpdateActive: false });
@@ -525,6 +530,9 @@ class LogSearchTab extends React.Component {
             const response = await this.props.sendTo('searchLogs', payload);
             if (response?.ok === false) {
                 throw new Error(response.error || 'Search failed');
+            }
+            if (payload.startNow && !Number.isFinite(response?.since)) {
+                throw new Error('Starting from now requires an updated logsearch adapter. Please restart the adapter.');
             }
             if (
                 !this.unmounted &&
@@ -540,6 +548,7 @@ class LogSearchTab extends React.Component {
                         truncated: !!response?.truncated,
                         loading: false,
                         cursor: response?.cursor || null,
+                        since: payload.startNow ? response.since : this.state.since,
                     },
                     () => this.startAutoUpdate(),
                 );
@@ -578,6 +587,16 @@ class LogSearchTab extends React.Component {
         this.clearSearchDebounce();
         this.pendingSearch = true;
         this.runSearch();
+    }
+
+    onNewLogs(onlyNew) {
+        this.clearSearchDebounce();
+        this.stopAutoUpdate(true);
+        this.invalidateSearchRequest();
+        this.resumeResyncPending = false;
+        this.setState({ onlyNew, since: null, rows: [], truncated: false, cursor: null, error: '' }, () =>
+            this.onSearch(),
+        );
     }
 
     onClear() {
@@ -685,9 +704,35 @@ class LogSearchTab extends React.Component {
                             >
                                 Clear filter
                             </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={() => this.onNewLogs(true)}
+                                size="small"
+                                title="Clear the table and show only new log entries. Log files are kept."
+                            >
+                                From now
+                            </Button>
+                            {this.state.onlyNew ? (
+                                <Button
+                                    variant="text"
+                                    onClick={() => this.onNewLogs(false)}
+                                    size="small"
+                                >
+                                    Show history
+                                </Button>
+                            ) : null}
                             {this.state.loading ? <CircularProgress size={20} /> : null}
                         </div>
                         <div className={classes.statusBadges}>
+                            {this.state.onlyNew ? (
+                                <Typography
+                                    component="span"
+                                    variant="caption"
+                                    className={classes.statusBadge}
+                                >
+                                    Only new entries
+                                </Typography>
+                            ) : null}
                             {this.state.autoUpdateActive ? (
                                 <Typography
                                     component="span"

@@ -94,6 +94,8 @@ describe("onMessage searchLogs handler", () => {
             command: "searchLogs",
             message: {
                 activeOnly: true,
+                startNow: true,
+                since: "123456789",
                 includeGzip: false,
                 cursor: {
                     file: "iobroker.current.log",
@@ -111,6 +113,8 @@ describe("onMessage searchLogs handler", () => {
         expect(searchLogsStub.firstCall.args[0]).to.include({
             includeGzip: true,
             activeOnly: true,
+            startNow: true,
+            since: 123456789,
         });
         expect(searchLogsStub.firstCall.args[0].cursor).to.deep.equal({
             file: "iobroker.current.log",
