@@ -82,7 +82,7 @@ describe('logDirectory detection', () => {
         ]);
     });
 
-    it('prefers the walk-up candidate that actually holds log files', () => {
+    it('uses the configured logger directory when another directory has unrelated files', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
             env: {},
@@ -100,7 +100,7 @@ describe('logDirectory detection', () => {
         expect(location.source).to.equal('controller-config');
     });
 
-    it('keeps the order of js-controller when no candidate holds log files', () => {
+    it('uses the configured logger directory even when multiple candidates are empty', () => {
         const location = detectLogLocation({
             controllerDir: NPM_CONTROLLER_DIR,
             env: {},
@@ -110,16 +110,58 @@ describe('logDirectory detection', () => {
             }),
         });
 
-        expect(location.directory).to.equal(normalize('/opt/log'));
+        expect(location.directory).to.equal(normalize('/opt/iobroker/log'));
     });
 
-    it('finds the log directory of a development checkout by walking up', () => {
+    for (const currentFiles of [undefined, [], ['iobroker.current.log']]) {
+        it(`does not select old logs in a parent directory when the configured directory is ${currentFiles === undefined ? 'missing' : currentFiles.length ? 'populated' : 'empty'}`, () => {
+            const dirs: Record<string, string[]> = {
+                '/opt/log': ['iobroker.2026-09-15.log'],
+            };
+            if (currentFiles !== undefined) {
+                dirs['/opt/iobroker/log'] = currentFiles;
+            }
+            const location = detectLogLocation({
+                controllerDir: NPM_CONTROLLER_DIR,
+                env: {},
+                ...fs({
+                    configs: { '/opt/iobroker/iobroker-data/iobroker.json': config() },
+                    dirs,
+                }),
+            });
+
+            expect(location.directory).to.equal(normalize('/opt/iobroker/log'));
+            expect(location.source).to.equal('controller-config');
+        });
+    }
+
+    it('does not select logs from another installation on Windows', () => {
+        const location = detectLogLocation({
+            controllerDir: 'C:/iobroker/node_modules/iobroker.js-controller',
+            env: {},
+            ...fs({
+                configs: { 'C:/iobroker/iobroker-data/iobroker.json': config() },
+                dirs: {
+                    'C:/log': ['iobroker.current.log'],
+                    'C:/iobroker/log': ['iobroker.current.log'],
+                },
+            }),
+        });
+
+        expect(toPosix(location.directory)).to.equal('C:/iobroker/log');
+        expect(location.source).to.equal('controller-config');
+    });
+
+    it('uses the logger directory of a development checkout despite logs in its parent', () => {
         const location = detectLogLocation({
             controllerDir: DEV_CONTROLLER_DIR,
             env: {},
             ...fs({
                 configs: { [`${DEV_CONTROLLER_DIR}/conf/iobroker.json`]: config() },
-                dirs: { [`${DEV_CONTROLLER_DIR}/log`]: ['iobroker.current.log'] },
+                dirs: {
+                    '/home/dev/log': ['iobroker.current.log'],
+                    [`${DEV_CONTROLLER_DIR}/log`]: ['iobroker.current.log'],
+                },
             }),
         });
 

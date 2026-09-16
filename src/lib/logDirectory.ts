@@ -107,20 +107,16 @@ export function getConfigFileCandidates(controllerDir: string, env: Record<strin
 /**
  * Derive directory and file naming from the `log.transport` section of `iobroker.json`.
  *
- * The file naming follows the transport preparation in `logger.ts`, the directory lookup for a
- * relative `filename` follows the `getLogFiles` host command, which walks up from the controller
- * directory. Only if no candidate exists (fresh installation) the `isNpm` rule of `logger.ts`
- * decides, so that the reported path is still the one the controller will write to.
+ * Both file naming and relative path resolution follow the transport preparation in `logger.ts`.
+ * Existing directories must not override this configured destination: they may contain stale logs
+ * or belong to another installation. Probing is only a fallback when no transport can be resolved.
  *
  * @param config Parsed content of `iobroker.json`.
  * @param controllerDir Root directory of js-controller.
- * @param probe Tells whether a candidate directory is usable. Preferring directories that already
- * contain matching log files resolves the ambiguity of the walk-up.
  */
 export function resolveTransportLocation(
     config: ControllerConfig | null | undefined,
     controllerDir: string,
-    probe?: (directory: string, naming: Pick<LogLocation, 'prefix' | 'extension'>) => 'files' | 'exists' | 'no',
 ): Omit<LogLocation, 'source'> | null {
     const transports = config?.log?.transport;
     if (!transports || typeof transports !== 'object') {
@@ -153,20 +149,7 @@ export function resolveTransportLocation(
             return { ...naming, directory: dirname(normalize(filename)) };
         }
 
-        const relativeDir = dirname(filename);
-        const candidates = getLogDirCandidates(relativeDir, controllerDir);
-        if (probe) {
-            const withFiles = candidates.find(candidate => probe(candidate, naming) === 'files');
-            if (withFiles) {
-                return { ...naming, directory: withFiles };
-            }
-            const existing = candidates.find(candidate => probe(candidate, naming) !== 'no');
-            if (existing) {
-                return { ...naming, directory: existing };
-            }
-        }
-
-        // nothing exists yet: report the path the controller is going to create
+        // Use the logger's destination even before it exists or contains any log files.
         return {
             ...naming,
             directory: dirname(
@@ -254,11 +237,7 @@ export function detectLogLocation(options: DetectLogLocationOptions = {}): LogLo
             continue;
         }
         try {
-            fromConfig = resolveTransportLocation(
-                JSON.parse(readFile(candidate)) as ControllerConfig,
-                controllerDir,
-                probe,
-            );
+            fromConfig = resolveTransportLocation(JSON.parse(readFile(candidate)) as ControllerConfig, controllerDir);
         } catch {
             fromConfig = null;
         }
