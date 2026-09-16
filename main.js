@@ -118,6 +118,8 @@ class Logsearch extends utils.Adapter {
             maxRows: Number(message.maxRows ?? this.config.defaultMaxRows ?? 500),
             includeGzip: true,
             activeOnly: message.activeOnly === true,
+            startNow: message.startNow === true,
+            since: message.since == null ? undefined : Number(message.since),
             cursor,
             debugLog: message => this.log.debug(message),
         };

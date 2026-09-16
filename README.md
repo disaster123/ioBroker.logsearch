@@ -15,6 +15,7 @@ Search ioBroker log files directly in the Admin interface by time range, level, 
 - Refreshes the active log every five seconds after a search.
 - Resynchronizes after the browser tab, network connection, or Admin socket resumes.
 - Keeps duplicate physical log lines as separate results.
+- Clears the table with **From now** and shows only new matching entries until **Show history** is selected.
 
 The text filter is a plain, case-insensitive substring search across the complete log line. It is not a regular expression.
 
@@ -47,7 +48,9 @@ The adapter enforces an absolute maximum of 5,000 rows per request. The configur
 3. Select **Search**. Changing a filter automatically starts a new search after a short delay.
 4. Leave the tab open to receive new matching entries automatically.
 
-Results are ordered newest first and show timestamp, level, source, and message. **Clear filter** restores the configured defaults.
+Results are ordered newest first and show timestamp, level, source, and message. **Clear filter** clears the text filter.
+
+**From now** immediately empties the table and starts watching for new entries. It keeps the current filters and does not delete any log files. The start point is set using the adapter's clock and remains active when searching again, changing filters, or reconnecting. Click **From now** again to start over, or **Show history** to include older entries within the selected time range again. Reloading the page also returns to the normal history view.
 
 ## Development
 
@@ -63,11 +66,11 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 
 ### Preparing a release
 
-Use Node.js 24 and `npm ci` for release builds. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Run `npm run build` and commit the version changes and all files added, changed, or removed in `admin/build` together. The release script already runs this build in its `before_commit` hook.
+Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Generated files in `admin/build` are intentionally not committed.
 
-Push the complete commit and wait for its **Test and Release** workflow to pass. CI runs `npm run build:check`, which rebuilds the Admin interface and rejects any difference from the committed assets, including new files. No background workflow updates the assets after these checks. Dependency updates that affect the build must include regenerated assets as well; the package-lock maintenance workflow does this in the same commit.
+Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the Admin interface for every pull request and release. Dependency updates only commit the updated package lock; CI verifies that the UI can still be built from it.
 
-Create an annotated `v<version>` tag on that exact verified commit and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job repeats the version and asset checks immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
+Create an annotated `v<version>` tag on that exact verified commit and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job builds the Admin interface immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
 
 ## Changelog
 
@@ -78,6 +81,7 @@ Create an annotated `v<version>` tag on that exact verified commit and push only
 
 ### **WORK IN PROGRESS**
 
+- (@disaster123) Add a From now button to hide old log entries.
 - (@disaster123) Verify committed Admin assets and release versions before publishing; remove background asset commits.
 
 ### 0.0.2 (2026-09-15)
