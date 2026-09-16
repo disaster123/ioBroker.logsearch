@@ -12,17 +12,14 @@ iobroker.*.tgz
 
 Thumbs.db
 
-# compiled backend (CI commits it to main for installations from GitHub)
-build
+# Source maps are not shipped. build/ is intentionally tracked on main by CI.
 *.map
 
 # admin GUI sources and build output
 src-admin/node_modules
 src-admin/build
 
-# generated admin GUI (built by "npm run build"; CI commits it to main for installations from GitHub)
-admin/*
-!admin/logsearch.png
+# admin/ is intentionally tracked on main by CI for installations from GitHub.
 
 # i18n intermediate files
 src-admin/src/i18n/flat.txt

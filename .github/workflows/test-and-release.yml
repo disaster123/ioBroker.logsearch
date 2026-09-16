@@ -119,8 +119,8 @@ jobs:
             echo "main moved; a newer workflow run will publish its build."
             exit 0
           fi
-          # main points to build/main.js, the Admin UI lives in admin/ - both are gitignored, so force-add them
-          git add -f -A -- build admin ':(exclude)*.map'
+          # Both output directories are intentionally tracked for installations from GitHub.
+          git add -A -- build admin ':(exclude)*.map'
           if git diff --cached --quiet; then
             echo "Admin build is already up to date."
             exit 0

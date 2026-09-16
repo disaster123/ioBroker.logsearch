@@ -128,6 +128,7 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
 - (@disaster123) Use the test dependencies provided by `@iobroker/testing` instead of declaring them twice.
 - (@disaster123) Use the controller-resolved data directory for log detection without direct process-environment access.
 - (@disaster123) Complete the Admin UI translations in all supported languages.
+- (@disaster123) Align Git ignore rules with the compiled adapter and Admin UI intentionally tracked by CI.
 
 ### 0.0.4 (2026-09-16)
 
