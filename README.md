@@ -15,7 +15,7 @@ Search ioBroker log files directly in the Admin interface by time range, level, 
 - Refreshes the active log every five seconds after a search.
 - Resynchronizes after the browser tab, network connection, or Admin socket resumes.
 - Keeps duplicate physical log lines as separate results.
-- Clears the table with **From now** and shows only new matching entries until **Show history** is selected.
+- Toggles the **From now** view to show only new matching entries or return to log history.
 - Exports the displayed log rows as a UTF-8 `.txt` file.
 
 The text filter is a plain, case-insensitive substring search across the complete log line. It is not a regular expression.
@@ -51,7 +51,7 @@ The adapter enforces an absolute maximum of 5,000 rows per request. The configur
 
 Results are ordered newest first and show timestamp, level, source, and message. **Clear filter** clears the text filter.
 
-**From now** immediately empties the table and starts watching for new entries. It keeps the current filters and does not delete any log files. The start point is set using the adapter's clock and remains active when searching again, changing filters, or reconnecting. Click **From now** again to start over, or **Show history** to include older entries within the selected time range again. Reloading the page also returns to the normal history view.
+**From now** immediately empties the table and starts watching for new entries. The button remains highlighted while this mode is active. It keeps the current filters and does not delete any log files. The start point is set using the adapter's clock and remains active when searching again, changing filters, or reconnecting. Click the highlighted **From now** button again to include older entries within the selected time range. Reloading the page also returns to the normal history view.
 
 **Export .txt** downloads exactly the currently displayed rows, newest first, including duplicate lines. The UTF-8 file contains the original log text without terminal color codes. Active filters and the row limit apply; a truncated result exports only the displayed rows.
 
@@ -84,7 +84,7 @@ Wait for the generated Admin-build commit, then create an annotated `v<version>`
 
 ### **WORK IN PROGRESS**
 
-- (@disaster123) Add a From now button to hide old log entries.
+- (@disaster123) Add a toggleable From now button to hide old log entries.
 - (@disaster123) Export the displayed log rows as a text file.
 - (@disaster123) Keep the CI-generated Admin build on `main` for installations from GitHub.
 - (@disaster123) Verify committed Admin assets and release versions before publishing; remove background asset commits.

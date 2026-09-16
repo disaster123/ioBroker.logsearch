@@ -50,7 +50,7 @@ describe("LogSearchTab new entries and export", () => {
         tab = createTab(sendTo);
         tab.onSearch();
         tab.state.rows = [{ message: "old" }];
-        tab.onNewLogs(true);
+        tab.onToggleNewLogs();
         expect(tab.state.rows).to.have.length(0);
         await clock.tickAsync(0);
         finishOld({ ok: true, rows: [{ message: "stale response" }], cursor });
@@ -60,12 +60,13 @@ describe("LogSearchTab new entries and export", () => {
         expect(tab.state.autoUpdateActive).to.equal(true);
     });
 
-    it("retains the boundary on poll, filter changes and resume, and restores history explicitly", async () => {
+    it("retains the boundary on poll, filter changes and resume, and toggles history on the second click", async () => {
         const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor, since: 1000 });
         tab = createTab(sendTo);
-        tab.onNewLogs(true);
+        tab.onToggleNewLogs();
         await clock.tickAsync(0);
         expect(sendTo.lastCall.args[1].startNow).to.equal(true);
+        expect(tab.state.onlyNew).to.equal(true);
         await tab.runAutoUpdate();
         expect(sendTo.lastCall.args[1]).to.include({ activeOnly: true, since: 1000 });
         tab.onFieldChange("searchText", "needle");
@@ -74,30 +75,29 @@ describe("LogSearchTab new entries and export", () => {
         tab.resyncAfterResume();
         await clock.tickAsync(0);
         expect(sendTo.lastCall.args[1].since).to.equal(1000);
-        tab.onNewLogs(true);
-        await clock.tickAsync(0);
-        expect(sendTo.lastCall.args[1].startNow).to.equal(true);
-        tab.onNewLogs(false);
+        tab.onToggleNewLogs();
         await clock.tickAsync(0);
         expect(sendTo.lastCall.args[1]).to.include({ startNow: false, since: null });
         expect(tab.state.onlyNew).to.equal(false);
         expect(tab.state.searchText).to.equal("needle");
     });
 
-    it("ignores an old in-flight poll after clearing the table again", async () => {
+    it("ignores an old in-flight poll after switching back to history", async () => {
         /** @type {(value: any) => void} */
         let finishPoll = () => { throw new Error("Poll was not started"); };
         const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor, since: 1000 });
         tab = createTab(sendTo);
-        tab.onNewLogs(true);
+        tab.onToggleNewLogs();
         await clock.tickAsync(0);
         sendTo.onCall(1).returns(new Promise(resolve => { finishPoll = resolve; }));
         const poll = tab.runAutoUpdate();
-        tab.onNewLogs(true);
+        tab.onToggleNewLogs();
         await clock.tickAsync(0);
         finishPoll({ ok: true, rows: [{ message: "old poll" }], cursor });
         await poll;
         expect(tab.state.rows).to.have.length(0);
+        expect(tab.state.onlyNew).to.equal(false);
+        expect(tab.state.since).to.equal(null);
     });
 
     it("exports a snapshot in display order with duplicates, Unicode and no ANSI colors", async () => {
