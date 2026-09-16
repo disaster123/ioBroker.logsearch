@@ -48,16 +48,16 @@ The adapter enforces an absolute maximum of 5,000 rows per request. The configur
 With an empty **Log directory** the adapter reads `iobroker.json` and evaluates the first enabled `log.transport`
 of type `file`, the same way js-controller does:
 
-- `filename` defaults to `log/iobroker`. Its directory part is resolved like the `getLogFiles` host command of
-  js-controller does it: walking up from the controller directory (`../../..`, `../..`, `..`, `.`) and taking the
-  first existing directory - preferring one that already holds matching log files. If none exists yet, the `isNpm`
-  rule of js-controller's `logger.ts` decides, so the reported path is the one the controller will create.
+- `filename` defaults to `log/iobroker`. Relative filenames are resolved using js-controller's `logger.ts` rule:
+  against the installation root for npm installations, or against the controller directory for a development
+  checkout. This destination is used even if it is empty or does not exist yet; logs in other directories
+  must not override the configured path.
 - An absolute `filename` (`/var/log/iobroker/iob` as well as `D:\logs\iobroker`) is used unchanged.
 - `fileext` determines the extension of the rotated files; the symlink of the active log is always
   `<name>.current.log`.
 - `IOBROKER_DATA_DIR` is honoured when looking for `iobroker.json`.
 
-If no configuration can be read at all, the adapter probes the same walk-up candidates for `log/`, plus the sibling
+If no usable file transport can be read, the adapter probes walk-up candidates for `log/`, plus the sibling
 of the data directory and `/opt/iobroker/log`. The detected directory is logged on start-up and shown on the
 configuration page. The obsolete default `/opt/iobroker/log` that earlier versions wrote into every instance is
 ignored when it does not exist, so existing instances also profit from the detection.
