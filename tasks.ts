@@ -1,5 +1,6 @@
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
-import { buildReact, copyFiles, deleteFoldersRecursive, npmInstall, patchHtmlFile } from '@iobroker/build-tools';
+import { buildReact, copyFiles, deleteFoldersRecursive, patchHtmlFile } from '@iobroker/build-tools';
+import { installGuiDependencies } from './scripts/install-gui-dependencies';
 
 // ts-node appends its own bootstrap arguments (including the relative "--project tsconfig.tasks.json")
 // to process.execArgv, and child_process.fork() inherits them. The children started by
@@ -38,10 +39,8 @@ async function patch(): Promise<void> {
 }
 
 function install(): Promise<void> {
-    if (existsSync(`${SRC}/node_modules`)) {
-        return Promise.resolve();
-    }
-    return npmInstall(SRC);
+    // A pre-existing node_modules directory may be stale after dependency or branch changes.
+    return installGuiDependencies(SRC);
 }
 
 function build(): Promise<void> {
