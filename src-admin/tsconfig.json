@@ -1,0 +1,25 @@
+// Specialized tsconfig for the admin GUI, includes DOM typings and configures the vite build
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "strict": true,
+        "useUnknownInCatchVariables": false,
+        "target": "ES2022",
+        "allowJs": false,
+        "checkJs": false,
+        "allowSyntheticDefaultImports": true,
+        "noEmit": true,
+        "sourceMap": true,
+        "sourceRoot": "./src",
+        "noImplicitAny": true,
+        "skipLibCheck": true,
+        "verbatimModuleSyntax": true,
+        "lib": ["es2022", "DOM"],
+        "jsx": "react",
+        "types": ["@iobroker/types", "vite/client"]
+    },
+    "include": ["./src/**/*.ts", "./src/**/*.d.ts", "./src/**/*.tsx", "./src/**/*.json"],
+    "exclude": ["**/node_modules", "**/build"]
+}

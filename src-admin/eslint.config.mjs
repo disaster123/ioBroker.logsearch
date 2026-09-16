@@ -1,7 +1,8 @@
-import config from '@iobroker/eslint-config';
+import config, { reactConfig } from '@iobroker/eslint-config';
 
 export default [
     ...config,
+    ...reactConfig,
     {
         languageOptions: {
             parserOptions: {
@@ -16,21 +17,9 @@ export default [
         rules: {
             'jsdoc/require-jsdoc': 'off',
             'jsdoc/require-param': 'off',
-            'jsdoc/check-tag-names': 'off',
-            'jsdoc/reject-any-type': 'off',
         },
     },
     {
-        ignores: [
-            'src-admin/**/*',
-            'admin/**/*',
-            'build/**/*',
-            'node_modules/**/*',
-            'test/**/*',
-            'scripts/**/*',
-            'tasks.ts',
-            '*.config.mjs',
-            '.**/*',
-        ],
+        ignores: ['build/**/*', 'node_modules/**/*', 'vite.config.mjs'],
     },
 ];

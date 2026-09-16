@@ -19,13 +19,32 @@ updates:
       - dependency-name: 'typescript'
         update-types:
           - 'version-update:semver-major'
-      - dependency-name: '@iobroker/adapter-react-v5'
+
+  # the admin GUI is a separate npm project
+  - package-ecosystem: npm
+    directory: '/src-admin'
+    schedule:
+      interval: cron
+      cronjob: '17 4 12 * *'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 15
+    assignees:
+      - disaster123
+    versioning-strategy: increase
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: 'typescript'
+        update-types:
+          - 'version-update:semver-major'
+      # a major bump of these must follow @iobroker/gui-components
+      - dependency-name: '@iobroker/gui-components'
         update-types:
           - 'version-update:semver-major'
       - dependency-name: '@mui/material'
         update-types:
           - 'version-update:semver-major'
-      - dependency-name: '@mui/styles'
+      - dependency-name: '@mui/icons-material'
         update-types:
           - 'version-update:semver-major'
       - dependency-name: '@emotion/react'

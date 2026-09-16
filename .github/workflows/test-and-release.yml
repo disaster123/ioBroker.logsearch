@@ -33,7 +33,24 @@ jobs:
           lint: true
           type-checking: true
 
-  # Build the Admin UI in CI. Generated assets are not committed to feature branches.
+  # Lint and type-check the admin GUI, which is a separate npm project
+  check-and-lint-gui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: npm
+          cache-dependency-path: src-admin/package-lock.json
+      - run: npm ci
+        working-directory: src-admin
+      - run: npm run lint
+        working-directory: src-admin
+      - run: npm run tsc
+        working-directory: src-admin
+
+  # Build the adapter (build/) and the Admin UI (admin/) in CI. Generated files are not committed to feature branches.
   build-and-check:
     runs-on: ubuntu-latest
     steps:
@@ -47,10 +64,17 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: npm run check:release
       - run: npm run build
+      - name: Verify the generated adapter and Admin UI
+        run: |
+          test -f build/main.js
+          test -f admin/index_m.html
+          test -f admin/tab_m.html
+          test -d admin/assets
+          grep -q 'lib/js/socket.io.js' admin/index_m.html
 
   # Runs adapter tests on all supported node versions and OSes
   adapter-tests:
-    needs: [check-and-lint, build-and-check]
+    needs: [check-and-lint, check-and-lint-gui, build-and-check]
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -67,9 +91,9 @@ jobs:
           # install-command: 'npm install'
           build: true
 
-  # Keep generated Admin assets on main so installations from GitHub include the UI.
+  # Keep the compiled adapter and the generated Admin UI on main so installations from GitHub work.
   persist-admin-build:
-    needs: [check-and-lint, build-and-check, adapter-tests]
+    needs: [check-and-lint, check-and-lint-gui, build-and-check, adapter-tests]
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -88,14 +112,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Commit generated Admin UI to main
+      - name: Commit generated adapter and Admin UI to main
         run: |
           remote_main="$(git ls-remote origin refs/heads/main | cut -f1)"
           if [ "$(git rev-parse HEAD)" != "$remote_main" ]; then
-            echo "main moved; a newer workflow run will publish its Admin build."
+            echo "main moved; a newer workflow run will publish its build."
             exit 0
           fi
-          git add -f -A admin/build
+          # main points to build/main.js, the Admin UI lives in admin/ - both are gitignored, so force-add them
+          git add -f -A -- build admin ':(exclude)*.map'
           if git diff --cached --quiet; then
             echo "Admin build is already up to date."
             exit 0
@@ -107,7 +132,7 @@ jobs:
 
   # Publish only after the tagged commit passes all checks.
   deploy:
-    needs: [check-and-lint, build-and-check, adapter-tests]
+    needs: [check-and-lint, check-and-lint-gui, build-and-check, adapter-tests]
 
     if: |
       github.event_name == 'push' &&

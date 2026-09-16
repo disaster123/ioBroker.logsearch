@@ -1,0 +1,4 @@
+{
+    "require": ["ts-node/register", "./test/mocha.setup.ts"],
+    "extensions": ["ts"]
+}
