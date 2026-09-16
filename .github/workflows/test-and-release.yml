@@ -67,6 +67,44 @@ jobs:
           # install-command: 'npm install'
           build: true
 
+  # Keep generated Admin assets on main so installations from GitHub include the UI.
+  persist-admin-build:
+    needs: [check-and-lint, build-and-check, adapter-tests]
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Commit generated Admin UI to main
+        run: |
+          remote_main="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$(git rev-parse HEAD)" != "$remote_main" ]; then
+            echo "main moved; a newer workflow run will publish its Admin build."
+            exit 0
+          fi
+          git add -f -A admin/build
+          if git diff --cached --quiet; then
+            echo "Admin build is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: update admin build"
+          git push origin HEAD:main
+
   # Publish only after the tagged commit passes all checks.
   deploy:
     needs: [check-and-lint, build-and-check, adapter-tests]

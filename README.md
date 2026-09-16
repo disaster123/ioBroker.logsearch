@@ -69,11 +69,11 @@ CI runs linting and JavaScript type checking on Node.js 24, then executes adapte
 
 ### Preparing a release
 
-Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Generated files in `admin/build` are intentionally not committed.
+Use Node.js 24 and `npm ci` for releases. Update the version in `package.json`, `io-package.json`, and both root version fields in `package-lock.json`, along with the changelog and translated release notes. Feature pull requests do not update generated files in `admin/build`.
 
-Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the Admin interface for every pull request and release. Dependency updates only commit the updated package lock; CI verifies that the UI can still be built from it.
+Push the complete source commit and wait for its **Test and Release** workflow to pass. CI rebuilds the Admin interface for every pull request. After all checks for a push to `main` pass, CI commits the generated `admin/build` files to `main` so installations directly from GitHub include the Admin interface. Dependency updates only commit the updated package lock; the subsequent test workflow publishes the matching Admin build.
 
-Create an annotated `v<version>` tag on that exact verified commit and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job builds the Admin interface immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
+Wait for the generated Admin-build commit, then create an annotated `v<version>` tag on the resulting `main` HEAD and push only that tag. Avoid CI-skip instructions in release commit messages. Tag runs verify that the tag and all package version fields agree. The publishing job builds the Admin interface immediately before publishing through npm Trusted Publishing and creating the GitHub release. Never move an existing published release tag.
 
 ## Changelog
 
@@ -86,6 +86,7 @@ Create an annotated `v<version>` tag on that exact verified commit and push only
 
 - (@disaster123) Add a From now button to hide old log entries.
 - (@disaster123) Export the displayed log rows as a text file.
+- (@disaster123) Keep the CI-generated Admin build on `main` for installations from GitHub.
 - (@disaster123) Verify committed Admin assets and release versions before publishing; remove background asset commits.
 
 ### 0.0.2 (2026-09-15)
