@@ -16,6 +16,7 @@ Search ioBroker log files directly in the Admin interface by time range, level, 
 - Resynchronizes after the browser tab, network connection, or Admin socket resumes.
 - Keeps duplicate physical log lines as separate results.
 - Clears the table with **From now** and shows only new matching entries until **Show history** is selected.
+- Exports the displayed log rows as a UTF-8 `.txt` file.
 
 The text filter is a plain, case-insensitive substring search across the complete log line. It is not a regular expression.
 
@@ -52,6 +53,8 @@ Results are ordered newest first and show timestamp, level, source, and message.
 
 **From now** immediately empties the table and starts watching for new entries. It keeps the current filters and does not delete any log files. The start point is set using the adapter's clock and remains active when searching again, changing filters, or reconnecting. Click **From now** again to start over, or **Show history** to include older entries within the selected time range again. Reloading the page also returns to the normal history view.
 
+**Export .txt** downloads exactly the currently displayed rows, newest first, including duplicate lines. The UTF-8 file contains the original log text without terminal color codes. Active filters and the row limit apply; a truncated result exports only the displayed rows.
+
 ## Development
 
 ```bash
@@ -82,6 +85,7 @@ Create an annotated `v<version>` tag on that exact verified commit and push only
 ### **WORK IN PROGRESS**
 
 - (@disaster123) Add a From now button to hide old log entries.
+- (@disaster123) Export the displayed log rows as a text file.
 - (@disaster123) Verify committed Admin assets and release versions before publishing; remove background asset commits.
 
 ### 0.0.2 (2026-09-15)

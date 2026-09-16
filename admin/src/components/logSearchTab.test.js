@@ -7,7 +7,7 @@ const sinon = require("sinon");
 const ts = require("typescript");
 
 // Run the real component methods with synchronous setState and mocked browser/MUI boundaries.
-function createTab(sendTo) {
+function createTab(sendTo, browser = {}) {
     const source = fs.readFileSync(require.resolve("./logSearchTab.jsx"), "utf8");
     const compiled = ts.transpileModule(source, {
         compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
@@ -21,7 +21,7 @@ function createTab(sendTo) {
             return {};
         },
         setTimeout, clearTimeout, setInterval, clearInterval,
-        window: {}, document: {},
+        window: browser.window || {}, document: browser.document || {},
     });
     const tab = new exports.LogSearchTab({ sendTo });
     tab.setState = (update, callback) => {
@@ -31,7 +31,7 @@ function createTab(sendTo) {
     return tab;
 }
 
-describe("LogSearchTab new entries", () => {
+describe("LogSearchTab new entries and export", () => {
     let clock;
     let tab;
     const cursor = { file: "iobroker.current.log", byteOffset: 100, lineNumber: 0 };
@@ -98,6 +98,33 @@ describe("LogSearchTab new entries", () => {
         finishPoll({ ok: true, rows: [{ message: "old poll" }], cursor });
         await poll;
         expect(tab.state.rows).to.have.length(0);
+    });
+
+    it("exports a snapshot in display order with duplicates, Unicode and no ANSI colors", async () => {
+        /** @type {Blob | undefined} */
+        let blob;
+        const click = sinon.spy();
+        const remove = sinon.spy();
+        const link = { click, remove };
+        const revokeObjectURL = sinon.spy();
+        tab = createTab(sinon.stub(), {
+            window: { Blob, URL: { createObjectURL: value => { blob = value; return "blob:test"; }, revokeObjectURL } },
+            document: { createElement: () => link, body: { appendChild: sinon.spy() } },
+        });
+        tab.state.rows = [
+            { rawPlain: "newest äöü", raw: "\u001b[32mnewest äöü" },
+            { rawPlain: "duplicate" },
+            { rawPlain: "duplicate" },
+        ];
+        tab.onExport();
+        tab.state.rows = [];
+        if (!blob) throw new Error("No download was created");
+        expect(await blob.text()).to.equal("newest äöü\nduplicate\nduplicate\n");
+        expect(blob.type).to.equal("text/plain;charset=utf-8");
+        expect(link.download).to.match(/^logsearch-.*\.txt$/);
+        expect(click.calledOnce && remove.calledOnce).to.equal(true);
+        await clock.tickAsync(1000);
+        expect(revokeObjectURL.calledWith("blob:test")).to.equal(true);
     });
 
 });

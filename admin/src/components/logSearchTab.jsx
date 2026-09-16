@@ -599,6 +599,30 @@ export class LogSearchTab extends React.Component {
         );
     }
 
+    onExport() {
+        if (!this.state.rows.length) {
+            return;
+        }
+        const text = this.state.rows
+            .map(
+                row => row.rawPlain || `${row.ts || ''} - ${row.level || ''}: ${row.source || ''} ${row.message || ''}`,
+            )
+            .join('\n');
+        const blob = new window.Blob([`${text}\n`], { type: 'text/plain;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `logsearch-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(link);
+        try {
+            link.click();
+        } finally {
+            link.remove();
+            // Give the browser time to start the download before releasing the object URL.
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        }
+    }
+
     onClear() {
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
@@ -721,6 +745,15 @@ export class LogSearchTab extends React.Component {
                                     Show history
                                 </Button>
                             ) : null}
+                            <Button
+                                variant="outlined"
+                                disabled={this.state.loading || !this.state.rows.length}
+                                onClick={() => this.onExport()}
+                                size="small"
+                                title="Download the displayed log rows as a text file"
+                            >
+                                Export .txt
+                            </Button>
                             {this.state.loading ? <CircularProgress size={20} /> : null}
                         </div>
                         <div className={classes.statusBadges}>
