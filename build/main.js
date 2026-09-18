@@ -7,7 +7,9 @@ exports.Logsearch = void 0;
 const adapter_core_1 = require("@iobroker/adapter-core");
 const logDirectory_1 = require("./lib/logDirectory");
 const messages_1 = require("./lib/messages");
+const searchHistory_1 = require("./lib/searchHistory");
 class Logsearch extends adapter_core_1.Adapter {
+    searchHistory = new searchHistory_1.SearchHistory(this);
     /** Detected once on start-up: changing the log configuration requires a controller restart anyway. */
     #location = null;
     constructor(options) {
@@ -42,6 +44,12 @@ class Logsearch extends adapter_core_1.Adapter {
     }
     /** Is called when databases are connected and the adapter received its configuration. */
     async onReady() {
+        try {
+            await this.searchHistory.get();
+        }
+        catch (error) {
+            this.log.warn(`Cannot initialize search history: ${error}`);
+        }
         const location = this.getLogLocation();
         this.log.info(`Searching ${location.prefix}.<date>${location.extension} in ${location.directory} (detected via ${location.source})`);
         const info = (0, logDirectory_1.describeLogLocation)(location);
@@ -62,7 +70,10 @@ class Logsearch extends adapter_core_1.Adapter {
      * @param obj Received ioBroker message.
      */
     async onMessage(obj) {
-        await (0, messages_1.handleMessage)(this, obj, { getLocation: () => this.getLogLocation() });
+        await (0, messages_1.handleMessage)(this, obj, {
+            getLocation: () => this.getLogLocation(),
+            searchHistory: this.searchHistory,
+        });
     }
     /**
      * Is called when the adapter shuts down - the callback has to be called under any circumstances.
