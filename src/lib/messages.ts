@@ -1,5 +1,6 @@
 import { describeLogLocation } from './logDirectory';
 import { searchLogs as defaultSearchLogs } from './logSearch';
+import type { SearchHistory } from './searchHistory';
 import type {
     LevelFilter,
     LogInfoResult,
@@ -31,6 +32,7 @@ export interface MessageAdapter {
 }
 
 export interface MessageHandlerDeps {
+    searchHistory?: Pick<SearchHistory, 'get' | 'remember'>;
     /** Log location, resolved once on adapter start. */
     getLocation: () => LogLocation;
     /** Injectable for tests. */
@@ -135,6 +137,24 @@ export async function handleMessage(
             adapter.sendTo(obj.from, obj.command, response, obj.callback);
         }
     };
+
+    if (obj.command === 'getSearchHistory' || obj.command === 'rememberSearch') {
+        try {
+            if (!deps.searchHistory) {
+                throw new Error('Search history is unavailable');
+            }
+            const entries =
+                obj.command === 'getSearchHistory'
+                    ? await deps.searchHistory.get()
+                    : await deps.searchHistory.remember(obj.message?.searchText);
+            respond({ ok: true, entries });
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            adapter.log.error(`${obj.command} failed: ${msg}`);
+            respond({ ok: false, error: msg });
+        }
+        return;
+    }
 
     if (obj.command === 'getLogInfo') {
         respond(buildLogInfo(deps.getLocation(), deps.describeLocation));

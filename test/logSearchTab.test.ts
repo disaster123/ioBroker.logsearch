@@ -83,6 +83,83 @@ describe('LogSearchTab new entries and export', () => {
         clock.restore();
     });
 
+    it('remembers completed input on blur, not keystrokes or polling', async () => {
+        const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor });
+        sendTo.withArgs('rememberSearch').resolves({ ok: true, entries: ['mqtt.0'] });
+        tab = createTab(sendTo);
+        tab.onFieldChange('searchText', 'm');
+        await clock.tickAsync(700);
+        tab.onFieldChange('searchText', 'mqtt.0');
+        await clock.tickAsync(700);
+        await tab.runAutoUpdate();
+        expect(sendTo.calledWith('rememberSearch')).to.equal(false);
+
+        tab.rememberCurrentSearch(true);
+        await clock.tickAsync(0);
+        expect(sendTo.withArgs('rememberSearch').calledOnceWith('rememberSearch', { searchText: 'mqtt.0' })).to.equal(
+            true,
+        );
+        expect(tab.state.searchHistory).to.deep.equal(['mqtt.0']);
+        tab.rememberCurrentSearch(true);
+        expect(sendTo.withArgs('rememberSearch').calledOnce).to.equal(true);
+    });
+
+    it('searches a history selection immediately, preserving filters and From now', async () => {
+        const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor, entries: ['chosen'] });
+        tab = createTab(sendTo);
+        Object.assign(tab.state, { onlyNew: true, since: 123, hours: 24, level: 'warn', maxRows: 100 });
+        tab.onFieldChange('searchText', 'unfinished');
+        tab.selectSearch('chosen');
+        await clock.tickAsync(1000);
+        expect(sendTo.withArgs('searchLogs').calledOnce).to.equal(true);
+        expect(sendTo.withArgs('searchLogs').firstCall.args[1]).to.include({
+            searchText: 'chosen',
+            since: 123,
+            hours: 24,
+            level: 'warn',
+            maxRows: 100,
+            startNow: false,
+        });
+        expect(sendTo.calledWith('rememberSearch', { searchText: 'chosen' })).to.equal(true);
+    });
+
+    it('ignores stale history loads and responses after unmount', async () => {
+        let finishLoad!: (value: unknown) => void;
+        const sendTo = sinon.stub().resolves({ ok: true, entries: ['new'] });
+        sendTo.withArgs('getSearchHistory').returns(
+            new Promise(resolve => {
+                finishLoad = resolve;
+            }),
+        );
+        tab = createTab(sendTo);
+        const loading = tab.loadSearchHistory();
+        tab.state.searchText = 'new';
+        tab.rememberCurrentSearch();
+        await clock.tickAsync(0);
+        finishLoad({ ok: true, entries: ['old'] });
+        await loading;
+        expect(tab.state.searchHistory).to.deep.equal(['new']);
+
+        const secondLoad = tab.loadSearchHistory();
+        tab.unmounted = true;
+        await secondLoad;
+        expect(tab.state.searchHistory).to.deep.equal(['new']);
+    });
+
+    it('keeps searching when history is unavailable and skips empty history entries', async () => {
+        const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor });
+        sendTo.withArgs('rememberSearch').rejects(new Error('offline'));
+        tab = createTab(sendTo);
+        tab.onSubmitSearch();
+        await clock.tickAsync(0);
+        expect(sendTo.calledWith('rememberSearch')).to.equal(false);
+        tab.state.searchText = 'needle';
+        tab.onSubmitSearch();
+        await clock.tickAsync(0);
+        expect(sendTo.withArgs('searchLogs').callCount).to.equal(2);
+        expect(tab.state.error).to.equal('');
+    });
+
     it('ignores an old in-flight search after From now clears the table', async () => {
         let finishOld: (value: any) => void = () => {
             throw new Error('Old search was not started');

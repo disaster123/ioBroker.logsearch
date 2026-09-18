@@ -116,6 +116,43 @@ describe('buildSearchOptions', () => {
 });
 
 describe('handleMessage', () => {
+    it('reads and remembers history without starting a log search', async () => {
+        const adapter = createAdapter();
+        const remembered: unknown[] = [];
+        const deps = {
+            getLocation: (): LogLocation => {
+                throw new Error('must not access logs');
+            },
+            searchHistory: {
+                get: async () => ['previous'],
+                remember: async (text: unknown) => {
+                    remembered.push(text);
+                    return ['next', 'previous'];
+                },
+            },
+        };
+        await handleMessage(adapter, message({}, 'getSearchHistory'), deps);
+        await handleMessage(adapter, message({ searchText: 'next' }, 'rememberSearch'), deps);
+        expect(remembered).to.deep.equal(['next']);
+        expect(adapter.sent.map(entry => entry.message)).to.deep.equal([
+            { ok: true, entries: ['previous'] },
+            { ok: true, entries: ['next', 'previous'] },
+        ]);
+    });
+
+    it('returns history storage failures to the caller', async () => {
+        const adapter = createAdapter();
+        await handleMessage(adapter, message({}, 'getSearchHistory'), {
+            getLocation: () => LOCATION,
+            searchHistory: {
+                get: () => Promise.reject(new Error('storage offline')),
+                remember: async () => [],
+            },
+        });
+        expect(adapter.sent[0].message).to.deep.equal({ ok: false, error: 'storage offline' });
+        expect(adapter.errors).to.deep.equal(['getSearchHistory failed: storage offline']);
+    });
+
     it('should answer searchLogs with the search result', async () => {
         const adapter = createAdapter();
         const calls: SearchLogsOptions[] = [];

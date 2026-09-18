@@ -18,6 +18,7 @@ Search ioBroker log files directly in the Admin interface by time range, level, 
 - Keeps duplicate physical log lines as separate results.
 - Toggles the **From now** view to show only new matching entries or return to log history.
 - Exports the displayed log rows as a UTF-8 `.txt` file.
+- Recalls the ten most recent distinct search texts from a persistent dropdown.
 
 The text filter is a plain, case-insensitive substring search across the complete log line. It is not a regular expression.
 
@@ -76,6 +77,14 @@ Results are ordered newest first and show timestamp, level, source, and message.
 
 **Export .txt** downloads exactly the currently displayed rows, newest first, including duplicate lines. The UTF-8 file contains the original log text without terminal color codes. Active filters and the row limit apply; a truncated result exports only the displayed rows.
 
+Click the **Search text** field to open the last ten searches, newest first. Select an entry with the mouse or
+arrow keys and Enter to search again without changing the other filters or **From now**. A non-empty query
+is remembered when you press Enter, click **Search**, or leave the edited field; automatic refreshes and
+intermediate keystrokes do not fill the history. Reusing a query moves it to the top (case-insensitive).
+The adapter stores the JSON list in `logsearch.<instance>.searchHistory`, for example
+`logsearch.0.searchHistory`. It survives adapter/browser restarts and is shared by users of that instance.
+Search text is kept literally, including spaces; only empty or whitespace-only entries are skipped.
+
 ## Development
 
 The adapter itself is TypeScript in `src/` and compiles to `build/`. The Admin GUI is a separate npm project in
@@ -125,6 +134,7 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
 
 ### **WORK IN PROGRESS**
 
+- (@disaster123) Add a dropdown with the last ten searches, persisted in the adapter instance's object tree.
 - (@disaster123) Use the test dependencies provided by `@iobroker/testing` instead of declaring them twice.
 - (@disaster123) Use the controller-resolved data directory for log detection without direct process-environment access.
 - (@disaster123) Complete the Admin UI translations in all supported languages.

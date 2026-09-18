@@ -1,6 +1,7 @@
 import React from 'react';
 
 import {
+    Autocomplete,
     Box,
     Button,
     CircularProgress,
@@ -248,6 +249,7 @@ export interface LogSearchTabProps {
 }
 
 interface LogSearchTabState {
+    searchHistory: string[];
     searchText: string;
     hours: number | string;
     level: LevelFilter;
@@ -266,6 +268,8 @@ interface LogSearchTabState {
 }
 
 export default class LogSearchTab extends React.Component<LogSearchTabProps, LogSearchTabState> {
+    private historyRequestToken = 0;
+    private searchTextEdited = false;
     private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private pendingSearch = false;
     private searchInFlight = false;
@@ -282,6 +286,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
     constructor(props: LogSearchTabProps) {
         super(props);
         this.state = {
+            searchHistory: [],
             searchText: '',
             hours: props.defaultHours || 72,
             level: 'all',
@@ -600,6 +605,55 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         }
     };
 
+    /** Refresh on opening the dropdown, including searches made in another browser. */
+    loadSearchHistory = async (): Promise<void> => {
+        await this.requestSearchHistory('getSearchHistory', {});
+    };
+
+    private async requestSearchHistory(command: string, message: unknown): Promise<void> {
+        if (this.unmounted || !this.isSocketReady()) {
+            return;
+        }
+        const token = ++this.historyRequestToken;
+        try {
+            const response = await this.props.sendTo(command, message);
+            if (
+                !this.unmounted &&
+                token === this.historyRequestToken &&
+                response?.ok &&
+                Array.isArray(response.entries)
+            ) {
+                this.setState({
+                    searchHistory: response.entries.filter((entry: unknown) => typeof entry === 'string').slice(0, 10),
+                });
+            }
+        } catch {
+            // Keep searches usable if history storage or the connection is temporarily unavailable.
+        }
+    }
+
+    rememberCurrentSearch(onlyIfEdited = false): void {
+        if (onlyIfEdited && !this.searchTextEdited) {
+            return;
+        }
+        this.searchTextEdited = false;
+        if (this.state.searchText.trim()) {
+            void this.requestSearchHistory('rememberSearch', { searchText: this.state.searchText });
+        }
+    }
+
+    selectSearch(searchText: string): void {
+        this.clearSearchDebounce();
+        this.stopAutoUpdate(true);
+        this.invalidateSearchRequest();
+        this.setState({ searchText }, () => this.onSubmitSearch());
+    }
+
+    onSubmitSearch(): void {
+        this.rememberCurrentSearch();
+        this.onSearch();
+    }
+
     onSearch(): void {
         this.clearSearchDebounce();
         this.pendingSearch = true;
@@ -644,6 +698,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
     }
 
     onClear(): void {
+        this.searchTextEdited = false;
         this.clearSearchDebounce();
         this.stopAutoUpdate(true);
         this.resumeResyncPending = false;
@@ -666,6 +721,9 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
     }
 
     onFieldChange = (field: 'searchText' | 'hours' | 'level' | 'maxRows', value: string): void => {
+        if (field === 'searchText') {
+            this.searchTextEdited = true;
+        }
         this.stopAutoUpdate(true);
         this.resumeResyncPending = false;
         if (this.searchInFlight) {
@@ -680,12 +738,35 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         return (
             <Paper sx={styles.searchPanel}>
                 <Box sx={styles.controlsGrid}>
-                    <TextField
-                        variant="standard"
+                    <Autocomplete
+                        freeSolo
+                        openOnFocus
+                        clearOnBlur={false}
+                        value={null}
+                        inputValue={this.state.searchText}
+                        options={this.state.searchHistory}
+                        filterOptions={options => options}
                         sx={styles.searchField}
-                        label={I18n.t('Search text')}
-                        value={this.state.searchText}
-                        onChange={e => this.onFieldChange('searchText', e.target.value)}
+                        onOpen={() => void this.loadSearchHistory()}
+                        onInputChange={(_event, value, reason) => {
+                            if (reason === 'input' || reason === 'clear') {
+                                this.onFieldChange('searchText', value);
+                            }
+                        }}
+                        onChange={(_event, value) => {
+                            if (typeof value === 'string') {
+                                this.selectSearch(value);
+                            }
+                        }}
+                        onBlur={() => this.rememberCurrentSearch(true)}
+                        renderInput={params => (
+                            <TextField
+                                {...params}
+                                variant="standard"
+                                label={I18n.t('Search text')}
+                                fullWidth
+                            />
+                        )}
                         size="small"
                         fullWidth
                     />
@@ -737,7 +818,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
                             variant="contained"
                             color="primary"
                             disabled={this.state.loading || !this.props.socketReady}
-                            onClick={() => this.onSearch()}
+                            onClick={() => this.onSubmitSearch()}
                             size="small"
                         >
                             {I18n.t('Search')}

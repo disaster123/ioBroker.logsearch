@@ -5,9 +5,11 @@ import { Adapter, controllerDir, getAbsoluteDefaultDataDir, type AdapterOptions 
 
 import { describeLogLocation, detectLogLocation } from './lib/logDirectory';
 import { handleMessage } from './lib/messages';
+import { SearchHistory } from './lib/searchHistory';
 import type { LogLocation } from './lib/types';
 
 export class Logsearch extends Adapter {
+    private readonly searchHistory = new SearchHistory(this);
     /** Detected once on start-up: changing the log configuration requires a controller restart anyway. */
     #location: LogLocation | null = null;
 
@@ -48,6 +50,11 @@ export class Logsearch extends Adapter {
 
     /** Is called when databases are connected and the adapter received its configuration. */
     private async onReady(): Promise<void> {
+        try {
+            await this.searchHistory.get();
+        } catch (error) {
+            this.log.warn(`Cannot initialize search history: ${error}`);
+        }
         const location = this.getLogLocation();
         this.log.info(
             `Searching ${location.prefix}.<date>${location.extension} in ${location.directory} (detected via ${location.source})`,
@@ -71,7 +78,10 @@ export class Logsearch extends Adapter {
      * @param obj Received ioBroker message.
      */
     private async onMessage(obj: ioBroker.Message): Promise<void> {
-        await handleMessage(this, obj, { getLocation: () => this.getLogLocation() });
+        await handleMessage(this, obj, {
+            getLocation: () => this.getLogLocation(),
+            searchHistory: this.searchHistory,
+        });
     }
 
     /**
