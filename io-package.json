@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "0.0.4",
+        "version": "0.0.5",
         "news": {
+            "0.0.5": {
+                "en": "Add a persistent history of the last ten searches with prefix filtering. Complete Admin UI translations and fix ioBroker compatibility warnings.",
+                "de": "Dauerhafte Historie der letzten zehn Suchbegriffe mit Präfixfilter hinzugefügt. Übersetzungen der Admin-Oberfläche vervollständigt und ioBroker-Kompatibilitätswarnungen behoben.",
+                "ru": "Добавлена сохраняемая история последних десяти поисковых запросов с фильтрацией по началу строки. Завершены переводы интерфейса Admin и устранены предупреждения о совместимости с ioBroker.",
+                "pt": "Adicionado um histórico persistente das últimas dez pesquisas com filtro por prefixo. Traduções da interface Admin concluídas e avisos de compatibilidade com ioBroker corrigidos.",
+                "nl": "Een blijvende geschiedenis van de laatste tien zoekopdrachten met filtering op beginletters toegevoegd. Vertalingen van de Admin-interface aangevuld en compatibiliteitswaarschuwingen van ioBroker verholpen.",
+                "fr": "Ajout d’un historique persistant des dix dernières recherches avec filtrage par préfixe. Traductions de l’interface Admin complétées et avertissements de compatibilité avec ioBroker corrigés.",
+                "it": "Aggiunta una cronologia persistente delle ultime dieci ricerche con filtro per prefisso. Completate le traduzioni dell’interfaccia Admin e corretti gli avvisi di compatibilità con ioBroker.",
+                "es": "Se añadió un historial persistente de las últimas diez búsquedas con filtro por prefijo. Se completaron las traducciones de la interfaz Admin y se corrigieron las advertencias de compatibilidad con ioBroker.",
+                "pl": "Dodano trwałą historię ostatnich dziesięciu wyszukiwań z filtrowaniem według początku tekstu. Uzupełniono tłumaczenia interfejsu Admin i usunięto ostrzeżenia dotyczące zgodności z ioBroker.",
+                "uk": "Додано збереження історії останніх десяти пошукових запитів із фільтрацією за початком рядка. Завершено переклади інтерфейсу Admin та усунуто попередження про сумісність з ioBroker.",
+                "zh-cn": "新增持久保存的最近十次搜索历史，支持按前缀筛选。补全管理界面翻译，并修复 ioBroker 兼容性警告。"
+            },
             "0.0.4": {
                 "en": "Detect log locations automatically, migrate the adapter to TypeScript and the Admin UI to Vite, and fix log path selection and GUI builds.",
                 "de": "Logverzeichnisse automatisch erkennen, Adapter auf TypeScript und Admin-Oberfläche auf Vite umstellen sowie Pfadauswahl und GUI-Builds korrigieren.",

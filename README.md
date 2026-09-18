@@ -117,7 +117,7 @@ Then open `http://localhost:3000/?instance=0` for the configuration dialog or
 `http://localhost:3000/?instance=0&tab=true` for the Log Search tab.
 
 CI lints and type-checks the adapter and the GUI on Node.js 24, builds both from a clean checkout, and then executes
-adapter tests on Node.js 22, 24, and 26 across Linux, Windows, and macOS.
+adapter tests on Node.js 22, 24, and 26 on Linux. Release tag pushes also run the adapter tests on Windows and macOS.
 
 ### Preparing a release
 
@@ -134,13 +134,14 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.0.5 (2026-09-18)
 
-- (@disaster123) Add a dropdown with the last ten searches, persisted in the adapter instance's object tree.
+- (@disaster123) Add a dropdown with the last ten searches, persisted in the adapter instance's object tree and filtered by prefix while typing.
 - (@disaster123) Use the test dependencies provided by `@iobroker/testing` instead of declaring them twice.
 - (@disaster123) Use the controller-resolved data directory for log detection without direct process-environment access.
 - (@disaster123) Complete the Admin UI translations in all supported languages.
 - (@disaster123) Align Git ignore rules with the compiled adapter and Admin UI intentionally tracked by CI.
+- (@disaster123) Run Windows and macOS adapter tests only on release tag pushes; keep Linux tests on every push and pull request.
 
 ### 0.0.4 (2026-09-16)
 
