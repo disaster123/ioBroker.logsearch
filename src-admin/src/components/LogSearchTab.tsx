@@ -745,7 +745,9 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
                         value={null}
                         inputValue={this.state.searchText}
                         options={this.state.searchHistory}
-                        filterOptions={options => options}
+                        filterOptions={(options, { inputValue }) =>
+                            options.filter(option => option.toLowerCase().startsWith(inputValue.toLowerCase()))
+                        }
                         sx={styles.searchField}
                         onOpen={() => void this.loadSearchHistory()}
                         onInputChange={(_event, value, reason) => {
