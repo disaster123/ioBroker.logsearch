@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "news": {
+            "1.0.1": {
+                "en": "Remember a cleared search filter as the last state while retaining the search history.",
+                "de": "Einen gelöschten Suchfilter als letzten Zustand speichern und dabei die Suchhistorie beibehalten.",
+                "ru": "Сохранять очищенный поисковый фильтр как последнее состояние, не удаляя историю поиска.",
+                "pt": "Guardar um filtro de pesquisa limpo como o último estado, mantendo o histórico de pesquisas.",
+                "nl": "Een gewist zoekfilter als laatste toestand onthouden en de zoekgeschiedenis behouden.",
+                "fr": "Mémoriser un filtre de recherche effacé comme dernier état tout en conservant l’historique des recherches.",
+                "it": "Memorizzare un filtro di ricerca cancellato come ultimo stato mantenendo la cronologia delle ricerche.",
+                "es": "Recordar un filtro de búsqueda borrado como último estado y conservar el historial de búsquedas.",
+                "pl": "Zapamiętywanie wyczyszczonego filtra wyszukiwania jako ostatniego stanu z zachowaniem historii wyszukiwania.",
+                "uk": "Зберігати очищений пошуковий фільтр як останній стан, не видаляючи історію пошуку.",
+                "zh-cn": "将已清空的搜索筛选条件记为最后状态，同时保留搜索历史。"
+            },
             "1.0.0": {
                 "en": "Restore the latest saved search automatically when opening the tab and promote Log Search to the first stable release.",
                 "de": "Beim Öffnen des Tabs die zuletzt gespeicherte Suche automatisch wiederherstellen und Log Search als erste stabile Version veröffentlichen.",
