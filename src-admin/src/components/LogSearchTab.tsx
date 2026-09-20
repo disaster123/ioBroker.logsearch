@@ -620,8 +620,8 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
             this.initialSearchStarted = false;
             return;
         }
-        const latestSearch = history?.[0];
-        if (latestSearch && !this.searchTextEdited) {
+        const latestSearch = history?.lastSearch;
+        if (latestSearch !== undefined && !this.searchTextEdited) {
             this.setState({ searchText: latestSearch }, () => this.onSearch());
         } else {
             this.onSearch();
@@ -633,7 +633,10 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         await this.requestSearchHistory('getSearchHistory', {});
     };
 
-    private async requestSearchHistory(command: string, message: unknown): Promise<string[] | null> {
+    private async requestSearchHistory(
+        command: string,
+        message: unknown,
+    ): Promise<{ entries: string[]; lastSearch: string } | null> {
         if (this.unmounted || !this.isSocketReady()) {
             return null;
         }
@@ -650,7 +653,11 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
                     .filter((entry: unknown): entry is string => typeof entry === 'string')
                     .slice(0, 10);
                 this.setState({ searchHistory: entries });
-                return entries;
+                return {
+                    entries,
+                    // Keep compatibility with an adapter that still returns only the old entries array.
+                    lastSearch: typeof response.lastSearch === 'string' ? response.lastSearch : entries[0] || '',
+                };
             }
         } catch {
             // Keep searches usable if history storage or the connection is temporarily unavailable.
@@ -663,9 +670,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
             return;
         }
         this.searchTextEdited = false;
-        if (this.state.searchText.trim()) {
-            void this.requestSearchHistory('rememberSearch', { searchText: this.state.searchText });
-        }
+        void this.requestSearchHistory('rememberSearch', { searchText: this.state.searchText });
     }
 
     selectSearch(searchText: string): void {
@@ -742,7 +747,10 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
                 cursor: null,
                 autoUpdateActive: false,
             },
-            () => this.onSearch(),
+            () => {
+                this.rememberCurrentSearch();
+                this.onSearch();
+            },
         );
     }
 

@@ -85,7 +85,7 @@ describe('LogSearchTab new entries and export', () => {
 
     it('prefills and searches the newest history entry when the tab initializes', async () => {
         const sendTo = sinon.stub();
-        sendTo.withArgs('getSearchHistory').resolves({ ok: true, entries: ['newest', 'older'] });
+        sendTo.withArgs('getSearchHistory').resolves({ ok: true, entries: ['newest', 'older'], lastSearch: 'newest' });
         sendTo.withArgs('searchLogs').resolves({ ok: true, rows: [], cursor });
         tab = createTab(sendTo);
 
@@ -101,7 +101,7 @@ describe('LogSearchTab new entries and export', () => {
 
     it('keeps the unfiltered initial search when the history is empty or unavailable', async () => {
         for (const response of [
-            { ok: true, entries: [] },
+            { ok: true, entries: ['previous'], lastSearch: '' },
             { ok: false, error: 'offline' },
         ]) {
             const sendTo = sinon.stub();
@@ -132,7 +132,7 @@ describe('LogSearchTab new entries and export', () => {
 
         const initializing = tab.initializeSearch();
         tab.onFieldChange('searchText', 'typed');
-        finishHistory({ ok: true, entries: ['stored'] });
+        finishHistory({ ok: true, entries: ['stored'], lastSearch: 'stored' });
         await initializing;
         await clock.tickAsync(0);
 
@@ -203,18 +203,33 @@ describe('LogSearchTab new entries and export', () => {
         expect(tab.state.searchHistory).to.deep.equal(['new']);
     });
 
-    it('keeps searching when history is unavailable and skips empty history entries', async () => {
+    it('keeps searching when history persistence is unavailable', async () => {
         const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor });
         sendTo.withArgs('rememberSearch').rejects(new Error('offline'));
         tab = createTab(sendTo);
         tab.onSubmitSearch();
         await clock.tickAsync(0);
-        expect(sendTo.calledWith('rememberSearch')).to.equal(false);
+        expect(sendTo.calledWith('rememberSearch', { searchText: '' })).to.equal(true);
         tab.state.searchText = 'needle';
         tab.onSubmitSearch();
         await clock.tickAsync(0);
         expect(sendTo.withArgs('searchLogs').callCount).to.equal(2);
         expect(tab.state.error).to.equal('');
+    });
+
+    it('persists Clear filter as the last state while retaining the dropdown history', async () => {
+        const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor });
+        sendTo.withArgs('rememberSearch').resolves({ ok: true, entries: ['needle', 'older'], lastSearch: '' });
+        tab = createTab(sendTo);
+        Object.assign(tab.state, { searchText: 'needle', searchHistory: ['needle', 'older'] });
+
+        tab.onClear();
+        await clock.tickAsync(0);
+
+        expect(sendTo.calledWith('rememberSearch', { searchText: '' })).to.equal(true);
+        expect(sendTo.withArgs('searchLogs').lastCall.args[1].searchText).to.equal('');
+        expect(tab.state.searchText).to.equal('');
+        expect(tab.state.searchHistory).to.deep.equal(['needle', 'older']);
     });
 
     it('ignores an old in-flight search after From now clears the table', async () => {

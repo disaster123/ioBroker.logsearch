@@ -124,10 +124,10 @@ describe('handleMessage', () => {
                 throw new Error('must not access logs');
             },
             searchHistory: {
-                get: async () => ['previous'],
+                get: async () => ({ entries: ['previous'], lastSearch: '' }),
                 remember: async (text: unknown) => {
                     remembered.push(text);
-                    return ['next', 'previous'];
+                    return { entries: ['next', 'previous'], lastSearch: 'next' };
                 },
             },
         };
@@ -135,8 +135,8 @@ describe('handleMessage', () => {
         await handleMessage(adapter, message({ searchText: 'next' }, 'rememberSearch'), deps);
         expect(remembered).to.deep.equal(['next']);
         expect(adapter.sent.map(entry => entry.message)).to.deep.equal([
-            { ok: true, entries: ['previous'] },
-            { ok: true, entries: ['next', 'previous'] },
+            { ok: true, entries: ['previous'], lastSearch: '' },
+            { ok: true, entries: ['next', 'previous'], lastSearch: 'next' },
         ]);
     });
 
@@ -146,7 +146,7 @@ describe('handleMessage', () => {
             getLocation: () => LOCATION,
             searchHistory: {
                 get: () => Promise.reject(new Error('storage offline')),
-                remember: async () => [],
+                remember: async () => ({ entries: [], lastSearch: '' }),
             },
         });
         expect(adapter.sent[0].message).to.deep.equal({ ok: false, error: 'storage offline' });

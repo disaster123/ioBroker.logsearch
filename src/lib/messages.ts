@@ -143,11 +143,11 @@ export async function handleMessage(
             if (!deps.searchHistory) {
                 throw new Error('Search history is unavailable');
             }
-            const entries =
+            const history =
                 obj.command === 'getSearchHistory'
                     ? await deps.searchHistory.get()
                     : await deps.searchHistory.remember(obj.message?.searchText);
-            respond({ ok: true, entries });
+            respond({ ok: true, ...history });
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             adapter.log.error(`${obj.command} failed: ${msg}`);
