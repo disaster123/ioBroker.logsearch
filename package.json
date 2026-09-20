@@ -1,6 +1,6 @@
 {
   "name": "iobroker.logsearch",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "description": "Search ioBroker log files by time range, level and text",
   "author": {
     "name": "Disaster123",

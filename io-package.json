@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "0.0.5",
+        "version": "1.0.0",
         "news": {
+            "1.0.0": {
+                "en": "Restore the latest saved search automatically when opening the tab and promote Log Search to the first stable release.",
+                "de": "Beim Öffnen des Tabs die zuletzt gespeicherte Suche automatisch wiederherstellen und Log Search als erste stabile Version veröffentlichen.",
+                "ru": "Автоматически восстанавливать последний сохранённый поиск при открытии вкладки и выпустить первую стабильную версию Log Search.",
+                "pt": "Restaurar automaticamente a última pesquisa guardada ao abrir o separador e lançar a primeira versão estável do Log Search.",
+                "nl": "De laatst opgeslagen zoekopdracht automatisch herstellen bij het openen van het tabblad en de eerste stabiele versie van Log Search uitbrengen.",
+                "fr": "Restaurer automatiquement la dernière recherche enregistrée à l’ouverture de l’onglet et publier la première version stable de Log Search.",
+                "it": "Ripristinare automaticamente l’ultima ricerca salvata all’apertura della scheda e pubblicare la prima versione stabile di Log Search.",
+                "es": "Restaurar automáticamente la última búsqueda guardada al abrir la pestaña y publicar la primera versión estable de Log Search.",
+                "pl": "Automatycznie przywracać ostatnie zapisane wyszukiwanie po otwarciu karty i wydać pierwszą stabilną wersję Log Search.",
+                "uk": "Автоматично відновлювати останній збережений пошук під час відкриття вкладки та випустити першу стабільну версію Log Search.",
+                "zh-cn": "打开标签页时自动恢复最近保存的搜索，并发布 Log Search 的首个稳定版本。"
+            },
             "0.0.5": {
                 "en": "Add a persistent history of the last ten searches with prefix filtering. Complete Admin UI translations and fix ioBroker compatibility warnings.",
                 "de": "Dauerhafte Historie der letzten zehn Suchbegriffe mit Präfixfilter hinzugefügt. Übersetzungen der Admin-Oberfläche vervollständigt und ioBroker-Kompatibilitätswarnungen behoben.",

@@ -135,7 +135,7 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 1.0.0 (2026-09-20)
 
 - (@disaster123) Restore the latest saved search when opening the Log Search tab.
 
