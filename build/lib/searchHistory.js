@@ -19,6 +19,20 @@ function normalizeHistory(value) {
     })
         .slice(0, MAX_ENTRIES);
 }
+function normalizeSnapshot(value) {
+    // 1.0.0 and earlier stored only the array. Its first entry was also the last search.
+    if (Array.isArray(value)) {
+        const entries = normalizeHistory(value);
+        return { entries, lastSearch: entries[0] || '' };
+    }
+    if (!value || typeof value !== 'object') {
+        return { entries: [], lastSearch: '' };
+    }
+    const stored = value;
+    const entries = normalizeHistory(stored.entries);
+    const lastSearch = typeof stored.lastSearch === 'string' && stored.lastSearch.trim() ? stored.lastSearch : '';
+    return { entries, lastSearch };
+}
 /** Persist in the adapter namespace; serialize read-modify-write operations across browsers. */
 class SearchHistory {
     adapter;
@@ -32,9 +46,14 @@ class SearchHistory {
     }
     remember(searchText) {
         return this.enqueue(async () => {
-            const history = await this.read();
-            const next = normalizeHistory([searchText, ...history]);
-            if (JSON.stringify(next) !== JSON.stringify(history)) {
+            const current = await this.read();
+            if (typeof searchText !== 'string') {
+                return current;
+            }
+            const lastSearch = searchText.trim() ? searchText : '';
+            const entries = lastSearch ? normalizeHistory([searchText, ...current.entries]) : current.entries;
+            const next = { entries, lastSearch };
+            if (JSON.stringify(next) !== JSON.stringify(current)) {
                 await this.adapter.setStateAsync(STATE_ID, { val: JSON.stringify(next), ack: true });
             }
             return next;
@@ -57,15 +76,16 @@ class SearchHistory {
         }
         const state = await this.adapter.getStateAsync(STATE_ID);
         if (state?.val == null) {
-            await this.adapter.setStateAsync(STATE_ID, { val: '[]', ack: true });
-            return [];
+            const empty = { entries: [], lastSearch: '' };
+            await this.adapter.setStateAsync(STATE_ID, { val: JSON.stringify(empty), ack: true });
+            return empty;
         }
         try {
-            return normalizeHistory(typeof state.val === 'string' ? JSON.parse(state.val) : null);
+            return normalizeSnapshot(typeof state.val === 'string' ? JSON.parse(state.val) : null);
         }
         catch {
             // A malformed stored value must not prevent searching or saving the next query.
-            return [];
+            return { entries: [], lastSearch: '' };
         }
     }
 }
