@@ -83,6 +83,63 @@ describe('LogSearchTab new entries and export', () => {
         clock.restore();
     });
 
+    it('prefills and searches the newest history entry when the tab initializes', async () => {
+        const sendTo = sinon.stub();
+        sendTo.withArgs('getSearchHistory').resolves({ ok: true, entries: ['newest', 'older'] });
+        sendTo.withArgs('searchLogs').resolves({ ok: true, rows: [], cursor });
+        tab = createTab(sendTo);
+
+        await tab.initializeSearch();
+        await clock.tickAsync(0);
+
+        expect(tab.state.searchHistory).to.deep.equal(['newest', 'older']);
+        expect(tab.state.searchText).to.equal('newest');
+        expect(sendTo.withArgs('searchLogs').calledOnce).to.equal(true);
+        expect(sendTo.withArgs('searchLogs').firstCall.args[1].searchText).to.equal('newest');
+        expect(sendTo.calledWith('rememberSearch')).to.equal(false);
+    });
+
+    it('keeps the unfiltered initial search when the history is empty or unavailable', async () => {
+        for (const response of [
+            { ok: true, entries: [] },
+            { ok: false, error: 'offline' },
+        ]) {
+            const sendTo = sinon.stub();
+            sendTo.withArgs('getSearchHistory').resolves(response);
+            sendTo.withArgs('searchLogs').resolves({ ok: true, rows: [], cursor });
+            tab = createTab(sendTo);
+
+            await tab.initializeSearch();
+            await clock.tickAsync(0);
+
+            expect(tab.state.searchText).to.equal('');
+            expect(sendTo.withArgs('searchLogs').calledOnce).to.equal(true);
+            expect(sendTo.withArgs('searchLogs').firstCall.args[1].searchText).to.equal('');
+            tab.stopAutoUpdate(true);
+        }
+    });
+
+    it('does not overwrite text entered while the initial history request is pending', async () => {
+        let finishHistory!: (value: unknown) => void;
+        const sendTo = sinon.stub();
+        sendTo.withArgs('getSearchHistory').returns(
+            new Promise(resolve => {
+                finishHistory = resolve;
+            }),
+        );
+        sendTo.withArgs('searchLogs').resolves({ ok: true, rows: [], cursor });
+        tab = createTab(sendTo);
+
+        const initializing = tab.initializeSearch();
+        tab.onFieldChange('searchText', 'typed');
+        finishHistory({ ok: true, entries: ['stored'] });
+        await initializing;
+        await clock.tickAsync(0);
+
+        expect(tab.state.searchText).to.equal('typed');
+        expect(sendTo.withArgs('searchLogs').firstCall.args[1].searchText).to.equal('typed');
+    });
+
     it('remembers completed input on blur, not keystrokes or polling', async () => {
         const sendTo = sinon.stub().resolves({ ok: true, rows: [], cursor });
         sendTo.withArgs('rememberSearch').resolves({ ok: true, entries: ['mqtt.0'] });

@@ -268,6 +268,7 @@ interface LogSearchTabState {
 }
 
 export default class LogSearchTab extends React.Component<LogSearchTabProps, LogSearchTabState> {
+    private initialSearchStarted = false;
     private historyRequestToken = 0;
     private searchTextEdited = false;
     private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -310,7 +311,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         window.addEventListener('online', this.handleResumeEvent);
         // searching before the socket and the instance are up would only produce an error
         if (this.props.socketReady) {
-            this.onSearch();
+            void this.initializeSearch();
         }
     }
 
@@ -325,7 +326,7 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         if (prevProps.socketReady === false && this.props.socketReady === true) {
             if (!this.state.hasSearched) {
                 // the connection became usable - run the initial search now
-                this.onSearch();
+                void this.initializeSearch();
                 return;
             }
             if (this.resumeResyncPending || this.isAutoUpdateStale()) {
@@ -605,14 +606,36 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
         }
     };
 
+    /** Restore the latest saved query before the first search shown in a newly opened tab. */
+    private initializeSearch = async (): Promise<void> => {
+        if (this.initialSearchStarted || this.unmounted || !this.isSocketReady()) {
+            return;
+        }
+        this.initialSearchStarted = true;
+        const history = await this.requestSearchHistory('getSearchHistory', {});
+        if (this.unmounted || this.state.hasSearched) {
+            return;
+        }
+        if (!this.isSocketReady()) {
+            this.initialSearchStarted = false;
+            return;
+        }
+        const latestSearch = history?.[0];
+        if (latestSearch && !this.searchTextEdited) {
+            this.setState({ searchText: latestSearch }, () => this.onSearch());
+        } else {
+            this.onSearch();
+        }
+    };
+
     /** Refresh on opening the dropdown, including searches made in another browser. */
     loadSearchHistory = async (): Promise<void> => {
         await this.requestSearchHistory('getSearchHistory', {});
     };
 
-    private async requestSearchHistory(command: string, message: unknown): Promise<void> {
+    private async requestSearchHistory(command: string, message: unknown): Promise<string[] | null> {
         if (this.unmounted || !this.isSocketReady()) {
-            return;
+            return null;
         }
         const token = ++this.historyRequestToken;
         try {
@@ -623,13 +646,16 @@ export default class LogSearchTab extends React.Component<LogSearchTabProps, Log
                 response?.ok &&
                 Array.isArray(response.entries)
             ) {
-                this.setState({
-                    searchHistory: response.entries.filter((entry: unknown) => typeof entry === 'string').slice(0, 10),
-                });
+                const entries = response.entries
+                    .filter((entry: unknown): entry is string => typeof entry === 'string')
+                    .slice(0, 10);
+                this.setState({ searchHistory: entries });
+                return entries;
             }
         } catch {
             // Keep searches usable if history storage or the connection is temporarily unavailable.
         }
+        return null;
     }
 
     rememberCurrentSearch(onlyIfEdited = false): void {

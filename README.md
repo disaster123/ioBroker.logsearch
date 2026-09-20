@@ -36,11 +36,11 @@ Once included, select **Log Search** in ioBroker Admin's adapter catalog and add
 
 ## Configuration
 
-| Setting | Default | Description |
-|---|---:|---|
-| Log directory | *(empty)* | Directory containing the ioBroker log files. Leave empty for automatic detection. |
-| Default hours | `72` | Initial time range used by the Log Search tab. |
-| Default max rows | `500` | Initial maximum number of rows returned. |
+| Setting          |   Default | Description                                                                       |
+| ---------------- | --------: | --------------------------------------------------------------------------------- |
+| Log directory    | _(empty)_ | Directory containing the ioBroker log files. Leave empty for automatic detection. |
+| Default hours    |      `72` | Initial time range used by the Log Search tab.                                    |
+| Default max rows |     `500` | Initial maximum number of rows returned.                                          |
 
 The adapter enforces an absolute maximum of 5,000 rows per request. The configured log directory is used server-side; a client cannot override it in a search request.
 
@@ -83,6 +83,7 @@ shows the full history. Select an entry with the mouse or
 arrow keys and Enter to search again without changing the other filters or **From now**. A non-empty query
 is remembered when you press Enter, click **Search**, or leave the edited field; automatic refreshes and
 intermediate keystrokes do not fill the history. Reusing a query moves it to the top (case-insensitive).
+When the tab opens, the newest saved search is restored and used for the initial search.
 The adapter stores the JSON list in `logsearch.<instance>.searchHistory`, for example
 `logsearch.0.searchHistory`. It survives adapter/browser restarts and is shared by users of that instance.
 Search text is kept literally, including spaces; only empty or whitespace-only entries are skipped.
@@ -133,6 +134,10 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+
+- (@disaster123) Restore the latest saved search when opening the Log Search tab.
 
 ### 0.0.5 (2026-09-18)
 
