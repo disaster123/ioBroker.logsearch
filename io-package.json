@@ -162,6 +162,7 @@
                 "admin": ">=7.6.20"
             }
         ],
+        "singleton": true,
         "adminTab": {
             "singleton": true,
             "name": {
