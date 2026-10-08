@@ -9,14 +9,14 @@ permissions:
 
 jobs:
   update-package-lock:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -46,14 +46,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json src-admin/package-lock.json
-          git commit -m "Update package locks"
-          git push origin HEAD:main
+          git commit -m "Update package locks [skip ci]"
+          git push origin "HEAD:refs/heads/${{ github.ref_name }}"
 
       - name: Trigger tests for updated package lock
         if: steps.lock_changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run test-and-release.yml --ref main
+        run: gh workflow run test-and-release.yml --ref "${{ github.ref_name }}"
 
       - name: No changes
         if: steps.lock_changes.outputs.changed != 'true'
