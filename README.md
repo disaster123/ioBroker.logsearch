@@ -142,6 +142,12 @@ Wait for the generated build commit, then create an annotated `v<version>` tag o
     ### **WORK IN PROGRESS**
 -->
 
+### 1.0.2 (2026-10-08)
+
+- (@disaster123) Limit the adapter to a single instance and translate the Admin tab into all supported languages.
+- (@disaster123) Document the standalone log search workspace and local-host scope.
+- (@disaster123) Update testing and Node 22 TypeScript development configuration for the ioBroker review.
+
 ### 1.0.1 (2026-09-20)
 
 - (@disaster123) Remember a cleared search filter when reopening the Log Search tab.
