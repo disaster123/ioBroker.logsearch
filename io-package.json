@@ -167,7 +167,16 @@
             "singleton": true,
             "name": {
                 "en": "Log Search",
-                "de": "Logsuche"
+                "de": "Logsuche",
+                "ru": "Поиск по журналам",
+                "pt": "Pesquisa de registos",
+                "nl": "Logboeken doorzoeken",
+                "fr": "Recherche dans les journaux",
+                "it": "Ricerca nei registri",
+                "es": "Búsqueda en registros",
+                "pl": "Wyszukiwanie w dziennikach",
+                "uk": "Пошук у журналах",
+                "zh-cn": "日志搜索"
             }
         }
     },
