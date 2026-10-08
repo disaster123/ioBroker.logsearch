@@ -34,6 +34,12 @@ The adapter is published on [npm](https://www.npmjs.com/package/iobroker.logsear
 
 Once included, select **Log Search** in ioBroker Admin's adapter catalog and add an instance.
 
+## Admin tab and instances
+
+The adapter is intentionally limited to one instance per ioBroker installation. Its singleton Admin tab provides an interactive log-search workspace with result tables, incremental updates, live filtering, search history, and export. The separate configuration view only manages the log location and search defaults; a standard jsonConfig configuration form is not suitable for this interactive workspace.
+
+On multi-host installations, log files are local to the host running the adapter. The Admin tab searches the logs accessible to that instance; it does not aggregate logs from other hosts.
+
 ## Configuration
 
 | Setting          |   Default | Description                                                                       |
