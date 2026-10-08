@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "news": {
+            "1.0.2": {
+                "en": "Limit the adapter to one instance, complete Admin tab translations, and update testing and TypeScript configuration.",
+                "de": "Den Adapter auf eine Instanz begrenzen, Admin-Tab-Übersetzungen vervollständigen und Testing- sowie TypeScript-Konfiguration aktualisieren.",
+                "ru": "Ограничена установка одним экземпляром, дополнены переводы вкладки администратора и обновлена конфигурация тестирования и TypeScript.",
+                "pt": "Limitar o adaptador a uma instância, completar as traduções do separador de administração e atualizar a configuração de testes e TypeScript.",
+                "nl": "De adapter beperken tot één instantie, de vertalingen van het beheertabblad aanvullen en de test- en TypeScript-configuratie bijwerken.",
+                "fr": "Limiter l’adaptateur à une seule instance, compléter les traductions de l’onglet d’administration et actualiser la configuration des tests et de TypeScript.",
+                "it": "Limitare l'adattatore a una sola istanza, completare le traduzioni della scheda amministrativa e aggiornare la configurazione dei test e di TypeScript.",
+                "es": "Limitar el adaptador a una instancia, completar las traducciones de la pestaña de administración y actualizar la configuración de pruebas y TypeScript.",
+                "pl": "Ograniczono adapter do jednej instancji, uzupełniono tłumaczenia karty administracyjnej oraz zaktualizowano konfigurację testów i TypeScript.",
+                "uk": "Обмежено адаптер одним екземпляром, доповнено переклади вкладки адміністратора й оновлено налаштування тестування та TypeScript.",
+                "zh-cn": "将适配器限制为单个实例，补全管理标签页翻译，并更新测试和 TypeScript 配置。"
+            },
             "1.0.1": {
                 "en": "Remember a cleared search filter as the last state while retaining the search history.",
                 "de": "Einen gelöschten Suchfilter als letzten Zustand speichern und dabei die Suchhistorie beibehalten.",
