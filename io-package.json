@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "logsearch",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "news": {
+            "1.0.3": {
+                "en": "Refresh the adapter icon, update dependencies, and improve Dependabot auto-merge compatibility.",
+                "de": "Adapter-Logo erneuert, Abhängigkeiten aktualisiert und Dependabot-Auto-Merge-Kompatibilität verbessert.",
+                "ru": "Обновлены значок адаптера и зависимости, улучшена совместимость автоматического слияния Dependabot.",
+                "pt": "Atualizado o ícone do adaptador e as dependências; melhorada a compatibilidade da integração automática do Dependabot.",
+                "nl": "Adapterpictogram en afhankelijkheden bijgewerkt en compatibiliteit met automatisch samenvoegen van Dependabot verbeterd.",
+                "fr": "Mise à jour de l’icône de l’adaptateur et des dépendances, et amélioration de la compatibilité de fusion automatique Dependabot.",
+                "it": "Aggiornati l’icona dell’adattatore e le dipendenze; migliorata la compatibilità dell’unione automatica di Dependabot.",
+                "es": "Actualizados el icono del adaptador y las dependencias; mejorada la compatibilidad de fusión automática de Dependabot.",
+                "pl": "Zaktualizowano ikonę adaptera i zależności oraz poprawiono zgodność automatycznego scalania Dependabot.",
+                "uk": "Оновлено значок адаптера й залежності та покращено сумісність автоматичного злиття Dependabot.",
+                "zh-cn": "更新适配器图标和依赖项，并改进 Dependabot 自动合并兼容性。"
+            },
             "1.0.2": {
                 "en": "Limit the adapter to one instance, complete Admin tab translations, and update testing and TypeScript configuration.",
                 "de": "Den Adapter auf eine Instanz begrenzen, Admin-Tab-Übersetzungen vervollständigen und Testing- sowie TypeScript-Konfiguration aktualisieren.",
@@ -80,19 +93,6 @@
                 "pl": "Dodano przełączany widok nowych wpisów dziennika oraz eksport wyświetlanych wierszy do pliku tekstowego.",
                 "uk": "Додано перемиканий режим перегляду нових записів журналу та експорт відображених рядків журналу в текстовий файл.",
                 "zh-cn": "添加可切换的新日志视图，并支持将显示的日志行导出为文本文件。"
-            },
-            "0.0.2": {
-                "en": "Update documentation for the npm publication and prepare automated releases.",
-                "de": "Dokumentation zur npm-Veröffentlichung aktualisiert und automatische Releases vorbereitet.",
-                "ru": "Обновлена документация о публикации в npm и подготовлены автоматические выпуски.",
-                "pt": "Documentação atualizada para a publicação no npm e preparação de lançamentos automáticos.",
-                "nl": "Documentatie bijgewerkt voor de npm-publicatie en automatische releases voorbereid.",
-                "fr": "Documentation mise à jour pour la publication sur npm et préparation des versions automatiques.",
-                "it": "Documentazione aggiornata per la pubblicazione su npm e preparazione dei rilasci automatici.",
-                "es": "Documentación actualizada para la publicación en npm y preparación de versiones automáticas.",
-                "pl": "Zaktualizowano dokumentację publikacji w npm i przygotowano automatyczne wydania.",
-                "uk": "Оновлено документацію щодо публікації в npm і підготовлено автоматичні випуски.",
-                "zh-cn": "更新 npm 发布文档并准备自动发布。"
             }
         },
         "titleLang": {
